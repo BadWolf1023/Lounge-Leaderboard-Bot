@@ -346,9 +346,10 @@ class Leaderboard(object):
     def __init__(self):
         self.last_leaderboard_sent = None
         self.last_stats_sent = None
+        self.last_used = None
     
-    def is_inactive(self):
-        if self.last_leaderboard_sent == None:
+    def isInactive(self):
+        if self.last_used == None:
             return False
         else:
             curTime = datetime.now()
@@ -462,6 +463,7 @@ class Leaderboard(object):
         
 
     async def send_leaderboard_message(self, message:discord.Message, prefix=Shared.prefix):
+        self.last_used = datetime.now()
         command_end = Shared.strip_prefix_and_command(message.content, leaderboard_terms, prefix).strip().split()        
         cooldown_message = ""
         global stats_count

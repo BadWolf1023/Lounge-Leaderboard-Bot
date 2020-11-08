@@ -19,6 +19,7 @@ bot_key = None
 testing_bot_key = None
 pickle_dump_path = "tiers_pickle.pkl"
 private_info_file = "private.txt"
+switch_status = True
 
 leaderboard_instances = defaultdict(lambda: defaultdict(Leaderboard.Leaderboard))
 client = discord.Client()
@@ -58,6 +59,21 @@ async def leaderboard_pull():
 async def checkBotAbuse():
     await Shared.abuseCheck(client)
     
+@tasks.loop(seconds=30)
+async def updatePresence():
+    global switch_status
+    game_str = ""
+    if switch_status:
+        game_str = "!leaderboard for Lounge leaderboards"
+    else:
+        game_str = "Mention me to see stats"
+    
+    switch_status = not switch_status
+    
+    game = discord.Game(game_str)
+    await client.change_presence(status=discord.Status.online, activity=game)
+
+    
 #This function will run every 30 min. It will remove any table bots that are
 #inactive, as defined by TableBot.isinactive() (currently 2.5 hours)
 @tasks.loop(minutes=15)
@@ -68,7 +84,7 @@ async def removeInactiveInstances():
             if leaderboard_instances[server_id][channel_id].isInactive(): #if the table bot is inactive, delete it
                 to_remove.append((server_id, channel_id))
                 
-    for (serv_id, chan_id)in to_remove:
+    for (serv_id, chan_id) in to_remove:
         del(leaderboard_instances[serv_id][chan_id])
 
 @tasks.loop(hours=24)
@@ -90,6 +106,7 @@ async def on_ready():
     removeInactiveInstances.start()
     Leaderboard.load_stats_in()
     Shared.load_blacklisted_users()
+    updatePresence.start()
     backup.start()
     print("Finished on ready.")
     
