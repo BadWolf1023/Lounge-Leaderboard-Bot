@@ -127,15 +127,21 @@ async def abuseCheck(client):
     if len(abuserIDs) > 0:
         await client.get_channel(BOT_ABUSE_REPORT_CHANNEL_ID).send("Check logs, the following IDs might be abusing the bot: " + ", ".join(abuserIDs))
         
+
+async def send_missing_permissions(channel:discord.TextChannel, content=None, delete_after=5):
+    try:
+        return await channel.send("I'm missing permissions. Contact your admins. The bot needs the following permissions:\n- Send Messages\n- Embed Links", delete_after=delete_after)
+    except discord.errors.Forbidden: #We can't send messages
+        pass
     
-    
+
 #Won't throw exceptions if we're missing permissions, it's "safe"
 async def safe_send(channel:discord.TextChannel, content=None, embed=None, delete_after=None):
     try:
-        await channel.send(content=content, embed=embed, delete_after=delete_after)
+        return await channel.send(content=content, embed=embed, delete_after=delete_after)
     except discord.errors.Forbidden: #Missing permissions
         try:
-            await channel.send("I'm missing permissions. Contact your admins. The bot needs the following permissions:\n- Send Messages\n- Embed Links")
+            return await channel.send("I'm missing permissions. Contact your admins. The bot needs the following permissions:\n- Send Messages\n- Embed Links")
         except discord.errors.Forbidden: #We can't send messages
             pass
     

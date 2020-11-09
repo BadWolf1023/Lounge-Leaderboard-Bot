@@ -42,11 +42,23 @@ ct_progress = 0.0
 
 
 date_filter_time = timedelta(days=14)
-TOP_N_RESULTS = 10
+TOP_N_RESULTS = 50
 
 LEADERBOARD_WAIT_TIME = timedelta(seconds=20)
 STATS_WAIT_TIME = timedelta(seconds=10)
 inactivity_time_period = timedelta(minutes=30)
+
+
+embed_page_time = timedelta(minutes=2)
+
+LEFT_ARROW_EMOTE = '\u25c0'
+RIGHT_ARROW_EMOTE = '\u25b6'
+
+#We're not using these
+FULL_LEFT_ARROW_EMOTE = '\u23ee'
+FULL_RIGHT_ARROW_EMOTE = '\u23ed'
+
+#await client.add_reaction(message,'\u25b6')'
 
 
 
@@ -83,7 +95,7 @@ total_stats = None
 
     
             
-#TODO: FInish these, pickling   
+#Pickling
 def load_stats_in():
     global stats_count
     global total_stats
@@ -118,21 +130,28 @@ def load_stats_in():
                 total_stats[type_key] = {}
                 for key in stat_terms:
                     total_stats[type_key][key] = 0
-            
-                
+   
 def pickle_stats():
-    with open(Shared.counter_file, "wb") as pickle_out:
-        try:
-            p.dump(stats_count, pickle_out)
-        except:
-            print("Could not dump pickle for stats counter. Current counter", stats_count)
     with open(Shared.total_stats_file, "wb") as pickle_out:
         try:
             p.dump(total_stats, pickle_out)
         except:
-            print("Could not dump total stats. Current dict:", total_stats)
+            print("Could not dump total stats. Current dict:", total_stats)         
+                
+def pickle_player_data():
+    with open("rts.pkl", "wb") as pickle_out:
+        try:
+            p.dump(lounge_player_data_rt, pickle_out)
+        except:
+            print("Could not dump pickle for rts.pkl.")
+    with open("cts.pkl", "wb") as pickle_out:
+        try:
+            p.dump(lounge_player_data_ct, pickle_out)
+        except:
+            print("Could not dump pickle for cts.pkl.")
             
-                     
+
+#JSON Data corruption checks        
 def all_player_is_corrupt(json_data):
     if not isinstance(json_data, list):
         return True
@@ -188,6 +207,7 @@ def detailed_players_is_corrupt(json_data):
     return False
 
 
+"""Pulling data from API"""
 async def pull_chunk(player_name:List[str], new_full_data_dict, is_rt=True):
     await asyncio.sleep(interval_time)
     success = True
@@ -236,7 +256,7 @@ async def pull_all_data(is_rt=True):
     global rt_last_updated
     global rt_progress
     global ct_progress
-    """
+    
     if in_testing_data_mode:
         if is_rt:
             with open('rts.pkl', "rb") as pickle_in:
@@ -254,7 +274,7 @@ async def pull_all_data(is_rt=True):
                     print("Could not read lounge player cts in.")
                     lounge_player_data_ct = {}
                 ct_last_updated = datetime.now()
-        return True"""
+        return True
 
     all_players = None
     success = True
@@ -315,7 +335,6 @@ async def pull_all_data(is_rt=True):
                         
     return success
 
-
 async def pull_data():
     global currently_pulling
     global lounge_player_data_rt
@@ -330,13 +349,16 @@ async def pull_data():
     #RTs first
     rt_success = await pull_all_data(True)
     rt_progress = 100.0
-    await asyncio.sleep(interval_time)
+    if not in_testing_data_mode:
+        await asyncio.sleep(interval_time)
     ct_success = await pull_all_data(False)
     ct_progress = 100.0
     global_cached = {}
     
         
     currently_pulling = False
+    print("Pickling player data...")
+    pickle_player_data()
         
     return rt_success and ct_success
 
@@ -366,11 +388,13 @@ class Leaderboard(object):
     def display_blacklist_command(self, message:str, prefix:str=Shared.prefix):
         return Shared.is_in(message, check_blacklist_terms, prefix)
     
+    
     def can_send_leaderboard(self):
         if self.last_leaderboard_sent == None:
             return True
         time_passed = datetime.now() - self.last_leaderboard_sent
         return time_passed >= LEADERBOARD_WAIT_TIME
+    
     def can_send_stats(self):
         if self.last_stats_sent == None:
             return True
@@ -408,6 +432,7 @@ class Leaderboard(object):
         last_updated_str += ", ".join(stuffs) + " ago"
         return last_updated_str
     
+    """#TODO: Add reaction text"""
     def get_extra_text(self, is_rt=True):
         total_message = "- Data updates every " + str(int(time_between_pulls.total_seconds())//3600) + " hours"
         cooldown_message = '\n- You can do !leaderboard again in ' + str(int(LEADERBOARD_WAIT_TIME.total_seconds())) + " seconds"
@@ -462,7 +487,7 @@ class Leaderboard(object):
         
         
 
-    async def send_leaderboard_message(self, message:discord.Message, prefix=Shared.prefix):
+    async def send_leaderboard_message(self, client, message:discord.Message, prefix=Shared.prefix):
         self.last_used = datetime.now()
         command_end = Shared.strip_prefix_and_command(message.content, leaderboard_terms, prefix).strip().split()        
         cooldown_message = ""
@@ -476,6 +501,7 @@ class Leaderboard(object):
             self.last_leaderboard_sent = datetime.now()
         if len(command_end) != 2:
             await Shared.safe_send(message.channel, "Here's how to use this command: *!leaderboard  <rt/ct>  <stat>*\n**stat** can be any of the following: *" + ",  ".join(stat_terms) + "*" + cooldown_message)
+        
         else:
             if command_end[0].lower() not in leaderboard_type_terms:
                 await Shared.safe_send(message.channel, "Specify a leaderboard type: rt or ct" + cooldown_message)
@@ -494,31 +520,100 @@ class Leaderboard(object):
                         await Shared.safe_send(message.channel, "The bot just booted up. Player data is still loading for CTs: **" + str(ct_progress) + "%** - This can take several minutes, try again later." + cooldown_message)
                         still_booting = True
                     
+                    #The bot has fully booted up
                     if not still_booting:
+                        #=========== Zero in here ============
                         field_name, embed_name, date_filter, should_reverse, minimum_events_needed = stat_terms[command_end[1].lower()]
                         results = self.__get_results(command_end[1].lower(), field_name, date_filter, should_reverse, minimum_events_needed, TOP_N_RESULTS, is_rt)
-                        embed_name = ("RT - " if is_rt else "CT - ") + embed_name
-                        embed = discord.Embed(
-                                    title = embed_name,
-                                    colour = discord.Colour.dark_blue()
-                                )
-            
-            
-                        for player in results:
-                            player_name = player['name']
-                            data_piece = player[field_name]
-                            if isinstance(data_piece, float):
-                                if field_name in mult_100_fields:
-                                    data_piece = str(round((data_piece*100), 1)) + "%"
-                                else:
-                                    data_piece = round(data_piece, 1)
-                            data_piece = str(data_piece)
-                            value_field = "[" + data_piece + "](" + player['url'] + ")"
-                            embed.add_field(name=player_name, value=value_field, inline=False)
                         
-                        embed.set_footer(text=self.get_extra_text(is_rt))
                         
-                        await Shared.safe_send(message.channel, embed=embed)
+                        page_num = 1
+                        first_page_embed = self.get_embed_page(page_num, results, is_rt, embed_name, field_name)
+                                                
+                        embed_message = await Shared.safe_send(message.channel, embed=first_page_embed)
+                        
+                        await embed_message.add_reaction(LEFT_ARROW_EMOTE)
+                        await embed_message.add_reaction(RIGHT_ARROW_EMOTE)
+                        
+                        
+                        message_author = message.author
+                        
+                        embed_page_start_time = datetime.now()
+                        
+                        while (datetime.now() - embed_page_start_time) < embed_page_time:
+                            def check(reaction, user):
+                                return reaction.message.id == embed_message.id and user == message_author and (str(reaction.emoji) == LEFT_ARROW_EMOTE or str(reaction.emoji) == RIGHT_ARROW_EMOTE)
+        
+                            try:
+                                timeout_time_delta = embed_page_time - (datetime.now() - embed_page_start_time)
+                                timeout_seconds = timeout_time_delta.total_seconds()
+                                if timeout_seconds <= 0:
+                                    break
+            
+                                reaction, user = await client.wait_for('reaction_add', timeout=timeout_seconds, check=check)
+                                #We know the original author added left or right arrow reaction
+                                await embed_message.remove_reaction(reaction, user)
+                                
+                                if str(reaction.emoji) == LEFT_ARROW_EMOTE:
+                                    if page_num > 1:
+                                        page_num -= 1
+                                elif str(reaction.emoji) == RIGHT_ARROW_EMOTE:
+                                    if page_num < 5:
+                                        page_num += 1
+                                
+                                embed_page = self.get_embed_page(page_num, results, is_rt, embed_name, field_name)
+                                await embed_message.edit(embed=embed_page)
+                                    
+                            except asyncio.TimeoutError:
+                                break
+                            except discord.errors.Forbidden:
+                                await Shared.send_missing_permissions(message.channel)
+                                break
+                            
+                            
+                            
+                            
+                            
+                        try:
+                            await embed_message.clear_reactions()
+                        except discord.errors.Forbidden:
+                            await Shared.send_missing_permissions(message.channel)
+                            
+                            
+                        
+                        
+                        
+    def get_embed_page(self, page_num, results, is_rt, embed_name, field_name) -> discord.Embed:
+        embed_name = ("RT - " if is_rt else "CT - ") + embed_name
+        embed = discord.Embed(
+                    title = embed_name,
+                    colour = discord.Colour.dark_blue()
+                )
+            
+        
+        to_display = results[(page_num-1)*10:(page_num*10)]
+        
+        if len(to_display) > 1:
+            for player in to_display:
+                player_name = player['name']
+                data_piece = player[field_name]
+                if isinstance(data_piece, float):
+                    if field_name in mult_100_fields:
+                        data_piece = str(round((data_piece*100), 1)) + "%"
+                    else:
+                        data_piece = round(data_piece, 1)
+                data_piece = str(data_piece)
+                value_field = "[" + data_piece + "](" + player['url'] + ")"
+                embed.add_field(name=player_name, value=value_field, inline=False)
+        else:
+            embed.add_field(name="No more players", value="\u200b", inline=False)
+        
+        page_number_text = "- Page " + str(page_num) + "/5\n"
+        embed.set_footer(text=page_number_text + self.get_extra_text(is_rt))
+        
+        return embed
+        
+    
     
     def get_top_x_stats_str(self, top_x=3):
         rt_top = sorted(total_stats['rt'].items(), key=lambda item: item[1], reverse=True)
@@ -568,7 +663,7 @@ class Leaderboard(object):
             if await Shared.process_blacklist(client, message):
                 pass
             elif self.can_send_leaderboard():
-                await self.send_leaderboard_message(message, prefix)
+                await self.send_leaderboard_message(client, message, prefix)
         if self.is_blacklist_command(message.content, prefix):
             if Shared.can_blacklist(message.author):
                 await Shared.blacklist(message)
@@ -582,5 +677,3 @@ class Leaderboard(object):
             return False
         return True
     
-
-

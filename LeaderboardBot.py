@@ -17,7 +17,7 @@ from collections import defaultdict
 testing_server = False
 bot_key = None
 testing_bot_key = None
-pickle_dump_path = "tiers_pickle.pkl"
+
 private_info_file = "private.txt"
 switch_status = True
 
@@ -91,6 +91,7 @@ async def removeInactiveInstances():
 async def backup():
     Shared.backup_files(Shared.backup_file_list)
     Leaderboard.pickle_stats()
+    #Leaderboard.pickle_player_data()
     Shared.pickle_blacklisted_users()
 
 def private_data_init():
@@ -107,6 +108,7 @@ async def on_ready():
     Leaderboard.load_stats_in()
     Shared.load_blacklisted_users()
     updatePresence.start()
+    checkBotAbuse.start()
     backup.start()
     print("Finished on ready.")
     
@@ -114,7 +116,9 @@ async def on_ready():
 def on_exit():
     Shared.backup_files()
     Leaderboard.pickle_stats()
+    #Leaderboard.pickle_player_data()
     Shared.pickle_blacklisted_users()
+    
     print("Exiting...")
         
 def handler(signum, frame):
