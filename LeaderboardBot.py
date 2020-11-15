@@ -20,6 +20,7 @@ testing_bot_key = None
 
 private_info_file = "private.txt"
 switch_status = True
+finished_on_ready = False
 
 leaderboard_instances = defaultdict(lambda: defaultdict(Leaderboard.Leaderboard))
 client = discord.Client()
@@ -91,7 +92,6 @@ async def removeInactiveInstances():
 async def backup():
     Shared.backup_files(Shared.backup_file_list)
     Leaderboard.pickle_stats()
-    #Leaderboard.pickle_player_data()
     Shared.pickle_blacklisted_users()
 
 def private_data_init():
@@ -103,20 +103,24 @@ def private_data_init():
 
 @client.event
 async def on_ready():
-    leaderboard_pull.start()
-    removeInactiveInstances.start()
-    Leaderboard.load_stats_in()
-    Shared.load_blacklisted_users()
-    updatePresence.start()
-    checkBotAbuse.start()
-    backup.start()
-    print("Finished on ready.")
+    global finished_on_ready
+    if not finished_on_ready:
+        Leaderboard.load_player_pickle_data()
+        Leaderboard.load_stats_in()
+        Shared.load_blacklisted_users()
+        
+        leaderboard_pull.start()
+        removeInactiveInstances.start()
+        updatePresence.start()
+        checkBotAbuse.start()
+        backup.start()
+        print("Finished on ready.")
+        finished_on_ready = True
     
 
 def on_exit():
     Shared.backup_files()
     Leaderboard.pickle_stats()
-    #Leaderboard.pickle_player_data()
     Shared.pickle_blacklisted_users()
     
     print("Exiting...")

@@ -21,20 +21,22 @@ import os
 medium_delete = 10
 long_delete = 30
 
-in_testing_data_mode = False
-
 lounge_player_data_rt = None
 lounge_player_data_ct = None
 global_cached = {}
-rt_main_url = "https://mariokartboards.com/lounge/json/player.php?type=rt&all"
-ct_main_url = "https://mariokartboards.com/lounge/json/player.php?type=ct&all"
-rt_specific_url = "https://mariokartboards.com/lounge/json/player.php?type=rt&name="
-ct_specific_url = "https://mariokartboards.com/lounge/json/player.php?type=ct&name="
+__rt_main_url_deprecated = "https://mariokartboards.com/lounge/json/player.php?type=rt&all"
+__ct_main_url_deprecated = "https://mariokartboards.com/lounge/json/player.php?type=ct&all"
+__rt_specific_url_deprecated = "https://mariokartboards.com/lounge/json/player.php?type=rt&name="
+__ct_specific_url_deprecated = "https://mariokartboards.com/lounge/json/player.php?type=ct&name="
+
+rt_specific_url = "https://mariokartboards.com/lounge/json/leaderboard.php?type=rt"
+ct_specific_url = "https://mariokartboards.com/lounge/json/leaderboard.php?type=ct"
+
 currently_pulling = True
-interval_time = 10 #wait this many seconds between each ping to mkboards.com
+interval_time = 20 #wait this many seconds between each ping to mkboards.com
 extra_wait_time = 20
 chunk_size = 25
-time_between_pulls = timedelta(hours=3)
+time_between_pulls = timedelta(hours=4)
 rt_last_updated = None
 ct_last_updated = None
 rt_progress = 0.0
@@ -49,7 +51,7 @@ STATS_WAIT_TIME = timedelta(seconds=10)
 inactivity_time_period = timedelta(minutes=30)
 
 
-embed_page_time = timedelta(minutes=2)
+embed_page_time = timedelta(minutes=1)
 
 LEFT_ARROW_EMOTE = '\u25c0'
 RIGHT_ARROW_EMOTE = '\u25b6'
@@ -69,11 +71,11 @@ remove_blacklist_user_terms = {"unban", "unbanuser", "removeban", "unblacklist",
 check_blacklist_terms = {"blacklist", "check", "checkblacklist", "displayblacklist", "banlist"}
 #key is command arg, tuple is:
 #field name in the JSON, embed name, time filter, and reversed, minimum events needed
-stat_terms = {'avg10':('average10_score', "Highest Average (Last 10)", True, True, 5),
+stat_terms = {'avg10':('average10_score', "Current Average (Last 10)", True, True, 5),
               'topscore':('top_score', 'Top Score', False, True, -1),
               'mmr':('current_mmr', "Current MMR", False, True, 5),
-              'mmrgain10':('gainloss10_mmr', "Most MMR Gained (Last 10)", True, True, -1),
-              'mmrloss10':('gainloss10_mmr', "Most MMR Lost (Last 10)", True, False, -1),
+              'mmrgain10':('gainloss10_mmr', "Current MMR Gained (Last 10)", True, True, -1),
+              'mmrloss10':('gainloss10_mmr', "Current MMR Lost (Last 10)", True, False, -1),
               'pens':('penalties', "Most Penalties", False, False, -1),
               'peakmmr':('peak_mmr', "Peak MMR", False, True, 5),
               'wins':('wins', "Most Wins", False, True, -1),
@@ -81,11 +83,11 @@ stat_terms = {'avg10':('average10_score', "Highest Average (Last 10)", True, Tru
               'maxgain':('max_gain_mmr', "Largest MMR Gain", False, True, -1),
               'maxloss':('max_loss_mmr', "Largest MMR Loss", False, False, -1),
               'winpercentage':('win_percentage', "Win Percentage", True, True, 10),
-              'wins10':('wins10', "Most Wins (Last 10)", True, True, -1),
-              'losses10':('loss10', "Most Losses (Last 10)", True, True, -1),
+              'wins10':('wins10', "Current Wins (Last 10)", True, True, -1),
+              'losses10':('loss10', "Current Losses (Last 10)", True, True, -1),
               'winstreak':('win_streak', "Current Win Streak", True, True, -1),
-              'avg':('average_score', "Highest Average", False, True, 10),
-              'events':('total_wars', "Most Events Played", False, True, -1)
+              'avg':('average_score', "Current Average", False, True, 10),
+              'events':('total_wars', "Events Played", False, True, -1)
               }
 mult_100_fields = {"win_percentage"}
 
@@ -137,22 +139,56 @@ def pickle_stats():
             p.dump(total_stats, pickle_out)
         except:
             print("Could not dump total stats. Current dict:", total_stats)         
-                
+    with open(Shared.counter_file, "wb") as pickle_out:
+        try:
+            p.dump(stats_count, pickle_out)
+        except:
+            print("Could not dump stats_counter. Current dict:", stats_count)         
+    
+    
 def pickle_player_data():
-    with open("rts.pkl", "wb") as pickle_out:
-        try:
-            p.dump(lounge_player_data_rt, pickle_out)
-        except:
-            print("Could not dump pickle for rts.pkl.")
-    with open("cts.pkl", "wb") as pickle_out:
-        try:
-            p.dump(lounge_player_data_ct, pickle_out)
-        except:
-            print("Could not dump pickle for cts.pkl.")
+    if lounge_player_data_rt != None and len(lounge_player_data_rt) > 0:
+        with open("rts.pkl", "wb") as pickle_out:
+            try:
+                p.dump(lounge_player_data_rt, pickle_out)
+            except:
+                print("Could not dump pickle for rts.pkl.")
+    if lounge_player_data_ct != None and len(lounge_player_data_ct) > 0:
+        with open("cts.pkl", "wb") as pickle_out:
+            try:
+                p.dump(lounge_player_data_ct, pickle_out)
+            except:
+                print("Could not dump pickle for cts.pkl.")
+                
+                
+def load_player_pickle_data():
+    global lounge_player_data_ct
+    global ct_last_updated
+    global lounge_player_data_rt
+    global rt_last_updated
+    
+    if lounge_player_data_rt == None:
+        if os.path.exists('rts.pkl'):
+            with open('rts.pkl', "rb") as pickle_in:
+                try:
+                    lounge_player_data_rt = p.load(pickle_in)
+                except:
+                    print("Could not read lounge player rts in.")
+                    lounge_player_data_rt = {}
+                rt_last_updated = datetime.now()
+    if lounge_player_data_ct == None:
+        if os.path.exists('cts.pkl'):
+            with open('cts.pkl', "rb") as pickle_in:
+                try:
+                    lounge_player_data_ct = p.load(pickle_in)
+                except:
+                    print("Could not read lounge player cts in.")
+                    lounge_player_data_ct = {}
+                ct_last_updated = datetime.now()
             
 
-#JSON Data corruption checks        
-def all_player_is_corrupt(json_data):
+#JSON Data corruption checks - No longer used since new Lounge API is favored     
+def __all_player_is_corrupt_deprecated(json_data):
     if not isinstance(json_data, list):
         return True
     if len(json_data) < 1:
@@ -165,7 +201,8 @@ def all_player_is_corrupt(json_data):
             return True
     return False
 
-def detailed_players_is_corrupt(json_data):
+
+def detailed_players_is_corrupt(json_data, caller_checks_null=True):
     if not isinstance(json_data, list):
         return True
     #update_date":"2020-11-02 23:41:22"
@@ -173,6 +210,12 @@ def detailed_players_is_corrupt(json_data):
         
         if not isinstance(player, dict):
             return True
+        
+        #We'll allow this, 
+        if caller_checks_null:
+            if 'name' in player and player['name'] is None:
+                continue
+         
          
         if 'pid' in player and isinstance(player['pid'], int) \
         and 'name' in player and isinstance(player['name'], str) \
@@ -206,18 +249,66 @@ def detailed_players_is_corrupt(json_data):
         return True
     return False
 
+#TODO: Fix this
+
+
 
 """Pulling data from API"""
-async def pull_chunk(player_name:List[str], new_full_data_dict, is_rt=True):
+async def pull_API_data(new_full_data_dict, is_rt=True):
     await asyncio.sleep(interval_time)
     success = True
     specific_url = rt_specific_url if is_rt else ct_specific_url
-    specific_url += ",".join(player_name).replace(" ","")
+
     chunk_data = None
     for i in range(5):
         try:
             chunk_data = await Shared.fetch(specific_url)
             chunk_is_corrupt = detailed_players_is_corrupt(chunk_data)
+            if chunk_is_corrupt:
+                print("Chunk was corrupt")
+            else:
+                break
+        except:
+            print("Failed to send url request, attempt #" + str(i))
+        if i < 4:
+            await asyncio.sleep(interval_time*(i+1)) #We wait an increasing amount of time if we fail, we try 5 times remember
+    else: #not breaking the loop means we failed 5 times
+        success = False
+    
+    if success and chunk_data != None:
+        for player in chunk_data:
+            if player['name'] == None:
+                continue
+            if player['ranking'] == 'Unranked':
+                continue
+            if player['name'].endswith("_false"):
+                continue
+            
+            try:
+                if isinstance(player['update_date'], str):
+                    player['update_date'] = datetime.strptime(player['update_date'], '%Y-%m-%d %H:%M:%S')
+                else:
+                    player['update_date'] = datetime.min
+            except:
+                print(player['update_date'])
+                player['update_date'] = datetime.min
+            new_full_data_dict[player['pid']] = player
+            
+                
+    return success
+        
+
+"""Pulling data from API"""
+async def __pull_chunk_deprecated(player_name:List[str], new_full_data_dict, is_rt=True):
+    await asyncio.sleep(interval_time)
+    success = True
+    specific_url = __rt_specific_url_deprecated if is_rt else __ct_specific_url_deprecated
+    specific_url += ",".join(player_name).replace(" ","")
+    chunk_data = None
+    for i in range(5):
+        try:
+            chunk_data = await Shared.fetch(specific_url)
+            chunk_is_corrupt = detailed_players_is_corrupt(chunk_data, False)
             if chunk_is_corrupt:
                 print("Chunk was corrupt")
             else:
@@ -247,45 +338,26 @@ async def pull_chunk(player_name:List[str], new_full_data_dict, is_rt=True):
     return success
         
 
-#Returns False is there was an error pulling the data
-
-async def pull_all_data(is_rt=True):
+#Returns False is there was an error pulling the data - deprecated in favor of pull_all_data
+#since that uses the new Leaderboard API, which means pinging only once 
+async def __pull_all_data_deprecated(is_rt=True):
     global lounge_player_data_ct
     global ct_last_updated
     global lounge_player_data_rt
     global rt_last_updated
     global rt_progress
     global ct_progress
-    
-    if in_testing_data_mode:
-        if is_rt:
-            with open('rts.pkl', "rb") as pickle_in:
-                try:
-                    lounge_player_data_rt = p.load(pickle_in)
-                except:
-                    print("Could not read lounge player rts in.")
-                    lounge_player_data_rt = {}
-                rt_last_updated = datetime.now()
-        else:
-            with open('cts.pkl', "rb") as pickle_in:
-                try:
-                    lounge_player_data_ct = p.load(pickle_in)
-                except:
-                    print("Could not read lounge player cts in.")
-                    lounge_player_data_ct = {}
-                ct_last_updated = datetime.now()
-        return True
 
     all_players = None
     success = True
-    main_url = rt_main_url if is_rt else ct_main_url
+    main_url = __rt_main_url_deprecated if is_rt else __ct_main_url_deprecated
     new_dict_data = {}
     
     try:
         all_players = await Shared.fetch(main_url)
     except:
         success = False
-    data_is_corrupt = all_player_is_corrupt(all_players)
+    data_is_corrupt = __all_player_is_corrupt_deprecated(all_players)
     if data_is_corrupt:
         success = False
     else:
@@ -300,7 +372,7 @@ async def pull_all_data(is_rt=True):
             
             
             if len(next_chunk) == chunk_size:
-                chunk_success = await pull_chunk(next_chunk, new_dict_data, is_rt)
+                chunk_success = await __pull_chunk_deprecated(next_chunk, new_dict_data, is_rt)
                 if not chunk_success:
                     print("Failed to pull chunk.")
                     success = False
@@ -308,13 +380,14 @@ async def pull_all_data(is_rt=True):
                 next_chunk = []
                 if is_rt:
                     rt_progress = round( (i/len(all_players))*100, 1)
+                    
                 else:
                     ct_progress = round( (i/len(all_players))*100, 1)
 
     
         else:
             if len(next_chunk) > 0:
-                chunk_success = await pull_chunk(next_chunk, new_dict_data, is_rt)
+                chunk_success = await __pull_chunk_deprecated(next_chunk, new_dict_data, is_rt)
                 if not chunk_success:
                     print("Failed to pull chunk.")
                     success = False   
@@ -335,6 +408,35 @@ async def pull_all_data(is_rt=True):
                         
     return success
 
+
+"""endcollapse"""
+#Returns False is there was an error pulling the data
+async def pull_all_data(is_rt=True):
+    global lounge_player_data_ct
+    global ct_last_updated
+    global lounge_player_data_rt
+    global rt_last_updated
+    global rt_progress
+    global ct_progress
+
+    success = True
+    new_dict_data = {}
+    chunk_success = await pull_API_data(new_dict_data, is_rt)
+    
+    if not chunk_success:
+        print("Failed to pull chunk.")
+        success = False  
+                    
+    if success:
+        if is_rt:
+            lounge_player_data_rt = new_dict_data
+            rt_last_updated = datetime.now()
+        else:
+            lounge_player_data_ct = new_dict_data
+            ct_last_updated = datetime.now() 
+                        
+    return success
+
 async def pull_data():
     global currently_pulling
     global lounge_player_data_rt
@@ -349,15 +451,13 @@ async def pull_data():
     #RTs first
     rt_success = await pull_all_data(True)
     rt_progress = 100.0
-    if not in_testing_data_mode:
-        await asyncio.sleep(interval_time)
+    await asyncio.sleep(interval_time)
     ct_success = await pull_all_data(False)
     ct_progress = 100.0
     global_cached = {}
     
         
     currently_pulling = False
-    print("Pickling player data...")
     pickle_player_data()
         
     return rt_success and ct_success
@@ -433,9 +533,11 @@ class Leaderboard(object):
         return last_updated_str
     
     """#TODO: Add reaction text"""
-    def get_extra_text(self, is_rt=True):
+    def get_extra_text(self, is_rt=True, is_dm=False):
         total_message = "- Data updates every " + str(int(time_between_pulls.total_seconds())//3600) + " hours"
-        cooldown_message = '\n- You can do !leaderboard again in ' + str(int(LEADERBOARD_WAIT_TIME.total_seconds())) + " seconds"
+        cooldown_message = ""
+        if not is_dm:
+            cooldown_message = '\n- You can do !leaderboard again in ' + str(int(LEADERBOARD_WAIT_TIME.total_seconds())) + " seconds"
         if is_rt:
             if rt_last_updated != None:
                 total_message += "\n- RTs " + self.__get_ago_str(rt_last_updated)
@@ -526,65 +628,78 @@ class Leaderboard(object):
                         field_name, embed_name, date_filter, should_reverse, minimum_events_needed = stat_terms[command_end[1].lower()]
                         results = self.__get_results(command_end[1].lower(), field_name, date_filter, should_reverse, minimum_events_needed, TOP_N_RESULTS, is_rt)
                         
-                        
+                        is_dm = message.guild == None
                         page_num = 1
-                        first_page_embed = self.get_embed_page(page_num, results, is_rt, embed_name, field_name)
-                                                
+                        first_page_embed = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm)             
                         embed_message = await Shared.safe_send(message.channel, embed=first_page_embed)
                         
-                        await embed_message.add_reaction(LEFT_ARROW_EMOTE)
-                        await embed_message.add_reaction(RIGHT_ARROW_EMOTE)
-                        
+                        try:
+                            await embed_message.add_reaction(LEFT_ARROW_EMOTE)
+                            await embed_message.add_reaction(RIGHT_ARROW_EMOTE)
+                        except discord.errors.Forbidden:
+                            await Shared.send_missing_permissions(message.channel)
+                            return
                         
                         message_author = message.author
                         
                         embed_page_start_time = datetime.now()
-                        
+                        sent_missing_perms_message = False
                         while (datetime.now() - embed_page_start_time) < embed_page_time:
                             def check(reaction, user):
                                 return reaction.message.id == embed_message.id and user == message_author and (str(reaction.emoji) == LEFT_ARROW_EMOTE or str(reaction.emoji) == RIGHT_ARROW_EMOTE)
         
+                            should_send_error_message = False
+                            timeout_time_delta = embed_page_time - (datetime.now() - embed_page_start_time)
+                            timeout_seconds = timeout_time_delta.total_seconds()
+                            if timeout_seconds <= 0:
+                                break
+                            reaction, user = None, None
                             try:
-                                timeout_time_delta = embed_page_time - (datetime.now() - embed_page_start_time)
-                                timeout_seconds = timeout_time_delta.total_seconds()
-                                if timeout_seconds <= 0:
-                                    break
-            
                                 reaction, user = await client.wait_for('reaction_add', timeout=timeout_seconds, check=check)
-                                #We know the original author added left or right arrow reaction
-                                await embed_message.remove_reaction(reaction, user)
-                                
-                                if str(reaction.emoji) == LEFT_ARROW_EMOTE:
-                                    if page_num > 1:
-                                        page_num -= 1
-                                elif str(reaction.emoji) == RIGHT_ARROW_EMOTE:
-                                    if page_num < 5:
-                                        page_num += 1
-                                
-                                embed_page = self.get_embed_page(page_num, results, is_rt, embed_name, field_name)
-                                await embed_message.edit(embed=embed_page)
-                                    
                             except asyncio.TimeoutError:
                                 break
+                            
+                            #We know the original author added left or right arrow reaction
+                            if message.guild != None:
+                                try:
+                                    await embed_message.remove_reaction(reaction, user)
+                                except discord.errors.Forbidden:
+                                    should_send_error_message = True
+                            
+                            if str(reaction.emoji) == LEFT_ARROW_EMOTE:
+                                if page_num > 1:
+                                    page_num -= 1
+                            elif str(reaction.emoji) == RIGHT_ARROW_EMOTE:
+                                if page_num < 5:
+                                    page_num += 1
+                                    
+                            embed_page = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm)
+                                
+                            try:
+                                await embed_message.edit(embed=embed_page, suppress=False)
                             except discord.errors.Forbidden:
-                                await Shared.send_missing_permissions(message.channel)
-                                break
+                                should_send_error_message = True
                             
-                            
-                            
-                            
-                            
+                            if should_send_error_message:
+                                Shared.send_missing_permissions(message.channel)
+                                sent_missing_perms_message = True
+                                
                         try:
-                            await embed_message.clear_reactions()
+                            await embed_message.clear_reaction(LEFT_ARROW_EMOTE)
+                            await embed_message.clear_reaction(RIGHT_ARROW_EMOTE)
                         except discord.errors.Forbidden:
-                            await Shared.send_missing_permissions(message.channel)
+                            try:
+                                await embed_message.remove_reaction(LEFT_ARROW_EMOTE, client.user)
+                                await embed_message.remove_reaction(RIGHT_ARROW_EMOTE, client.user)
+                            except:
+                                pass
+                            if message.guild != None and not sent_missing_perms_message:
+                                await Shared.send_missing_permissions(message.channel)
                             
-                            
                         
                         
-                        
-    def get_embed_page(self, page_num, results, is_rt, embed_name, field_name) -> discord.Embed:
-        embed_name = ("RT - " if is_rt else "CT - ") + embed_name
+    def get_embed_page(self, page_num, results, is_rt, embed_name, field_name, is_dm=False) -> discord.Embed:
+        embed_name = ("RT - " if is_rt else "CT - ") + embed_name + " - Page " + str(page_num) + "/5"
         embed = discord.Embed(
                     title = embed_name,
                     colour = discord.Colour.dark_blue()
@@ -594,7 +709,7 @@ class Leaderboard(object):
         to_display = results[(page_num-1)*10:(page_num*10)]
         
         if len(to_display) > 1:
-            for player in to_display:
+            for rank, player in enumerate(to_display, start=((page_num-1)*10)+1):
                 player_name = player['name']
                 data_piece = player[field_name]
                 if isinstance(data_piece, float):
@@ -603,13 +718,13 @@ class Leaderboard(object):
                     else:
                         data_piece = round(data_piece, 1)
                 data_piece = str(data_piece)
-                value_field = "[" + data_piece + "](" + player['url'] + ")"
+                value_field = "[\u200b\u200b" + data_piece + "](" + player['url'] + ")"
                 embed.add_field(name=player_name, value=value_field, inline=False)
         else:
             embed.add_field(name="No more players", value="\u200b", inline=False)
         
         page_number_text = "- Page " + str(page_num) + "/5\n"
-        embed.set_footer(text=page_number_text + self.get_extra_text(is_rt))
+        embed.set_footer(text=self.get_extra_text(is_rt, is_dm))
         
         return embed
         

@@ -9,7 +9,7 @@ from pathlib import Path
 counter_file = "stats_counter.pkl"
 total_stats_file = "total_stats.pkl"
 blacklisted_users_file = "blacklisted_users.pkl"
-backup_file_list = [counter_file, total_stats_file, ]
+backup_file_list = [counter_file, total_stats_file, 'rts.pkl', 'cts.pkl']
 backup_folder = "backups/"
 import shutil
 from datetime import datetime
@@ -128,9 +128,9 @@ async def abuseCheck(client):
         await client.get_channel(BOT_ABUSE_REPORT_CHANNEL_ID).send("Check logs, the following IDs might be abusing the bot: " + ", ".join(abuserIDs))
         
 
-async def send_missing_permissions(channel:discord.TextChannel, content=None, delete_after=5):
+async def send_missing_permissions(channel:discord.TextChannel, content=None, delete_after=7):
     try:
-        return await channel.send("I'm missing permissions. Contact your admins. The bot needs the following permissions:\n- Send Messages\n- Embed Links", delete_after=delete_after)
+        return await channel.send("I'm missing permissions. Contact your admins. The bot needs the following permissions:\n- Send Messages\n- Embed Links\n- Add Reactions (for pages)\n- Manage Messages (to remove reactions)", delete_after=delete_after)
     except discord.errors.Forbidden: #We can't send messages
         pass
     
@@ -141,7 +141,7 @@ async def safe_send(channel:discord.TextChannel, content=None, embed=None, delet
         return await channel.send(content=content, embed=embed, delete_after=delete_after)
     except discord.errors.Forbidden: #Missing permissions
         try:
-            return await channel.send("I'm missing permissions. Contact your admins. The bot needs the following permissions:\n- Send Messages\n- Embed Links")
+            return await channel.send("I'm missing permissions. Contact your admins. The bot needs the following permissions:\n- Send Messages\n- Embed Links\n- Add Reactions (for pages)\n- Manage Messages (to remove reactions)")
         except discord.errors.Forbidden: #We can't send messages
             pass
     
