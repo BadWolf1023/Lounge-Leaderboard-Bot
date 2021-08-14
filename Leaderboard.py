@@ -57,8 +57,42 @@ FULL_RIGHT_ARROW_EMOTE = '\u23ed'
 
 #await client.add_reaction(message,'\u25b6')'
 
-player_id_json_name = 'player_id'
+player_id_json_name = "player_id"
 player_name_json_name = "player_name"
+player_flag_json_name = "player_country_flag"
+player_base_mmr_json_name = "base_mmr"
+player_base_lr_json_name = "base_lr"
+player_strikes_json_name = "strikes"
+player_current_mmr_json_name = "current_mmr"
+player_current_lr_json_name = "current_lr"
+player_peak_mmr_json_name = "peak_mmr"
+player_peak_lr_json_name = "peak_lr"
+player_lowest_mmr_json_name = "lowest_mmr"
+player_lowest_lr_json_name = "lowest_lr"
+player_wins_json_name = "wins"
+player_losses_json_name = "loss"
+player_most_mmr_gained_json_name = "max_gain_mmr"
+player_most_lr_gained_json_name = "max_gain_lr"
+player_most_mmr_lost_json_name = "max_loss_mmr"
+player_most_lr_lost_json_name = "max_loss_lr"
+player_win_percentage_json_name = "win_percentage"
+player_net_mmr_last_10_json_name = "gainloss10_mmr"
+player_net_lr_last_10_json_name = "gainloss10_lr"
+player_wins_last_10_json_name = "wins10"
+player_losses_last_10_json_name = "loss10"
+player_win_ratio_last_10_json_name = "win10_percentage"
+player_win_streak_json_name = "win_streak"
+player_top_score_json_name = "top_score"
+player_average_score_json_name = "average_score"
+player_average_score_last_10_json_name = "average10_score"
+player_std_score_json_name = "std_score"
+player_std_score_last_10_json_name = "std10_score"
+player_events_played_json_name = "total_events"
+player_penalties_json_name = "penalties"
+player_ranking_json_name = "ranking"
+player_last_event_date_json_name = "last_event_date"
+player_url_json_name = "url"
+player_emblem_url_json_name = "current_emblem"
 
 
 leaderboard_terms = {"leader", "leaderboard", "ldr", "board"}
@@ -68,7 +102,7 @@ remove_blacklist_user_terms = {"unban", "unbanuser", "removeban", "unblacklist",
 check_blacklist_terms = {"blacklist", "check", "checkblacklist", "displayblacklist", "banlist"}
 inrole_terms = {'inrole'}
 """
-{
+{player_id, player_name, current_mmr, current_lr, 
    "player_id":"260",
    "player_name":"Az",
    "player_country_flag":"jp",
@@ -121,7 +155,7 @@ inrole_terms = {'inrole'}
 stat_terms = {'avg10':('average10_score', "Current Average (Last 10)", True, True, 5),
               'topscore':('top_score', 'Top Score', False, True, -1),
               'mmr':('current_mmr', "Current MMR", False, True, 5),
-              'lr':('current_mmr', "Current MMR", False, True, 5),
+              'lr':('current_lr', "Current LR", False, True, 5),
               'mmrgain10':('gainloss10_mmr', "Current MMR Gained (Last 10)", True, True, -1),
               'mmrloss10':('gainloss10_mmr', "Current MMR Lost (Last 10)", True, False, -1),
               'pens':('penalties', "Most Penalties", False, False, -1),
@@ -264,36 +298,46 @@ def detailed_players_is_corrupt(json_data, caller_checks_null=True):
         if caller_checks_null:
             if player_name_json_name in player and player[player_name_json_name] is None:
                 continue
-            
         
-         
+
         if player_id_json_name in player and isinstance(player[player_id_json_name], str) and isint(player[player_id_json_name])\
         and player_name_json_name in player and isinstance(player[player_name_json_name], str) \
-        and 'strikes' in player and isinstance(player['strikes'], str) and isint(player['strikes'])\
-        and 'current_mmr' in player and isinstance(player['current_mmr'], str) and isint(player['current_mmr'])\
-        and 'peak_mmr' in player and isinstance(player['peak_mmr'], str) and isint(player['peak_mmr'])\
-        and 'lowest_mmr' in player and isinstance(player['lowest_mmr'], str) and isint(player['lowest_mmr'])\
-        and 'wins' in player and isinstance(player['wins'], str) and isint(player['wins'])\
-        and 'loss' in player and isinstance(player['loss'], str) and isint(player['loss'])\
-        and 'max_gain_mmr' in player and isinstance(player['max_gain_mmr'], str) and isint(player['max_gain_mmr'])\
-        and 'max_loss_mmr' in player and isinstance(player['max_loss_mmr'], str) and isint(player['max_loss_mmr'])\
-        and 'win_percentage' in player and isinstance(player['win_percentage'], str) and isfloat(player['win_percentage']) \
-        and 'gainloss10_mmr' in player and isinstance(player['gainloss10_mmr'], str) and isint(player['gainloss10_mmr'])\
-        and 'wins10' in player and isinstance(player['wins10'], str) and isint(player['wins10'])\
-        and 'loss10' in player and isinstance(player['loss10'], str) and isint(player['loss10'])\
-        and 'win10_percentage' in player and isinstance(player['win10_percentage'], str) and isfloat(player['win10_percentage'])\
-        and 'win_streak' in player and isinstance(player['win_streak'], str) and isint(player['win_streak'])\
-        and 'top_score' in player and isinstance(player['top_score'], str) and isint(player['top_score'])\
-        and 'average_score' in player and isinstance(player['average_score'], str) and isfloat(player['average_score'])\
-        and 'average10_score' in player and isinstance(player['average10_score'], str) and isfloat(player['average10_score'])\
-        and 'total_wars' in player and isinstance(player['total_wars'], str) and isint(player['total_wars']) \
-        and 'penalties' in player and isinstance(player['penalties'], str) and isint(player['penalties']) \
-        and 'total_strikes' in player and isinstance(player['total_strikes'], str) and isint(player['total_strikes']) \
-        and 'ranking' in player and isinstance(player['ranking'], str) and (isint(player['ranking']) or player['ranking'] == "Unranked") \
-        and 'update_date' in player and isinstance(player['update_date'], str) \
-        and 'url' in player and isinstance(player['url'], str):
+        and player_flag_json_name in player and isinstance(player[player_flag_json_name], str)\
+        and player_base_mmr_json_name in player and isinstance(player[player_base_mmr_json_name], str) and isint(player[player_base_mmr_json_name])\
+        and player_base_lr_json_name in player and isinstance(player[player_base_lr_json_name], str) and isint(player[player_base_lr_json_name])\
+        and player_strikes_json_name in player and isinstance(player[player_strikes_json_name], str) and isint(player[player_strikes_json_name])\
+        and player_current_mmr_json_name in player and isinstance(player[player_current_mmr_json_name], str) and isint(player[player_current_mmr_json_name])\
+        and player_current_lr_json_name in player and isinstance(player[player_current_lr_json_name], str) and isint(player[player_current_lr_json_name])\
+        and player_peak_mmr_json_name in player and isinstance(player[player_peak_mmr_json_name], str) and isint(player[player_peak_mmr_json_name])\
+        and player_peak_lr_json_name in player and isinstance(player[player_peak_lr_json_name], str) and isint(player[player_peak_lr_json_name])\
+        and player_lowest_mmr_json_name in player and isinstance(player[player_lowest_mmr_json_name], str) and isint(player[player_lowest_mmr_json_name])\
+        and player_lowest_lr_json_name in player and isinstance(player[player_lowest_lr_json_name], str) and isint(player[player_lowest_lr_json_name])\
+        and player_wins_json_name in player and isinstance(player[player_wins_json_name], str) and isint(player[player_wins_json_name])\
+        and player_losses_json_name in player and isinstance(player[player_losses_json_name], str) and isint(player[player_losses_json_name])\
+        and player_most_mmr_gained_json_name in player and isinstance(player[player_most_mmr_gained_json_name], str) and isint(player[player_most_mmr_gained_json_name])\
+        and player_most_lr_gained_json_name in player and isinstance(player[player_most_lr_gained_json_name], str) and isint(player[player_most_lr_gained_json_name])\
+        and player_most_mmr_lost_json_name in player and isinstance(player[player_most_mmr_lost_json_name], str) and isint(player[player_most_mmr_lost_json_name])\
+        and player_most_lr_lost_json_name in player and isinstance(player[player_most_lr_lost_json_name], str) and isint(player[player_most_lr_lost_json_name])\
+        and player_win_percentage_json_name in player and isinstance(player[player_win_percentage_json_name], str) and isfloat(player[player_win_percentage_json_name]) \
+        and player_net_mmr_last_10_json_name in player and isinstance(player[player_net_mmr_last_10_json_name], str) and isint(player[player_net_mmr_last_10_json_name])\
+        and player_net_lr_last_10_json_name in player and isinstance(player[player_net_lr_last_10_json_name], str) and isint(player[player_net_lr_last_10_json_name])\
+        and player_wins_last_10_json_name in player and isinstance(player[player_wins_last_10_json_name], str) and isint(player[player_wins_last_10_json_name])\
+        and player_losses_last_10_json_name in player and isinstance(player[player_losses_last_10_json_name], str) and isint(player[player_losses_last_10_json_name])\
+        and player_win_ratio_last_10_json_name in player and isinstance(player[player_win_ratio_last_10_json_name], str) and isfloat(player[player_win_ratio_last_10_json_name])\
+        and player_win_streak_json_name in player and isinstance(player[player_win_streak_json_name], str) and isint(player[player_win_streak_json_name])\
+        and player_top_score_json_name in player and isinstance(player[player_top_score_json_name], str) and isint(player[player_top_score_json_name])\
+        and player_average_score_json_name in player and isinstance(player[player_average_score_json_name], str) and isfloat(player[player_average_score_json_name])\
+        and player_average_score_last_10_json_name in player and isinstance(player[player_average_score_last_10_json_name], str) and isfloat(player[player_average_score_last_10_json_name])\
+        and player_std_score_json_name in player and isinstance(player[player_std_score_json_name], str) and isfloat(player[player_std_score_json_name])\
+        and player_std_score_last_10_json_name in player and isinstance(player[player_std_score_last_10_json_name], str) and isfloat(player[player_std_score_last_10_json_name])\
+        and player_events_played_json_name in player and isinstance(player[player_events_played_json_name], str) and isint(player[player_events_played_json_name]) \
+        and player_penalties_json_name in player and isinstance(player[player_penalties_json_name], str) and isint(player[player_penalties_json_name]) \
+        and player_ranking_json_name in player and isinstance(player[player_ranking_json_name], str) and (isint(player[player_ranking_json_name]) or player[player_ranking_json_name] == "Unranked") \
+        and player_last_event_date_json_name in player and isinstance(player[player_last_event_date_json_name], str) \
+        and player_url_json_name in player and isinstance(player[player_url_json_name], str)\
+        and player_emblem_url_json_name in player and isinstance(player[player_emblem_url_json_name], str):
             continue
-        
+
         for key in player:
             print('key:', key, 'value:', player[key], "type:", type(player[key]))
         return True
