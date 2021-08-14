@@ -14,7 +14,6 @@ import discord
 import Shared
 from datetime import datetime, timedelta
 import asyncio
-from typing import List
 import dill as p
 import os
 
@@ -59,6 +58,7 @@ FULL_RIGHT_ARROW_EMOTE = '\u23ed'
 #await client.add_reaction(message,'\u25b6')'
 
 player_id_json_name = 'player_id'
+player_name_json_name = "player_name"
 
 
 leaderboard_terms = {"leader", "leaderboard", "ldr", "board"}
@@ -121,6 +121,7 @@ inrole_terms = {'inrole'}
 stat_terms = {'avg10':('average10_score', "Current Average (Last 10)", True, True, 5),
               'topscore':('top_score', 'Top Score', False, True, -1),
               'mmr':('current_mmr', "Current MMR", False, True, 5),
+              'lr':('current_mmr', "Current MMR", False, True, 5),
               'mmrgain10':('gainloss10_mmr', "Current MMR Gained (Last 10)", True, True, -1),
               'mmrloss10':('gainloss10_mmr', "Current MMR Lost (Last 10)", True, False, -1),
               'pens':('penalties', "Most Penalties", False, False, -1),
@@ -179,6 +180,7 @@ def load_stats_in():
                 total_stats[type_key] = {}
                 for key in stat_terms:
                     total_stats[type_key][key] = 0
+        #TODO: add keys in
    
 def pickle_stats():
     with open(Shared.total_stats_file, "wb") as pickle_out:
@@ -260,13 +262,13 @@ def detailed_players_is_corrupt(json_data, caller_checks_null=True):
         
         #We'll allow this, 
         if caller_checks_null:
-            if 'name' in player and player['name'] is None:
+            if player_name_json_name in player and player[player_name_json_name] is None:
                 continue
             
         
          
         if player_id_json_name in player and isinstance(player[player_id_json_name], str) and isint(player[player_id_json_name])\
-        and 'name' in player and isinstance(player['name'], str) \
+        and player_name_json_name in player and isinstance(player[player_name_json_name], str) \
         and 'strikes' in player and isinstance(player['strikes'], str) and isint(player['strikes'])\
         and 'current_mmr' in player and isinstance(player['current_mmr'], str) and isint(player['current_mmr'])\
         and 'peak_mmr' in player and isinstance(player['peak_mmr'], str) and isint(player['peak_mmr'])\
@@ -321,11 +323,11 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
     
     if success and chunk_data != None:
         for player in chunk_data:
-            if player['name'] == None:
+            if player[player_name_json_name] == None:
                 continue
             if player['ranking'] == 'Unranked':
                 continue
-            if player['name'].endswith("_false"):
+            if player[player_name_json_name].endswith("_false"):
                 continue
             
             player[player_id_json_name] = int(player[player_id_json_name])
@@ -747,7 +749,7 @@ class Leaderboard(object):
         
         if len(to_display) > 1:
             for rank, player in enumerate(to_display, start=((page_num-1)*10)+1):
-                player_name = player['name']
+                player_name = player[player_name_json_name]
                 data_piece = player[field_name]
                 if isinstance(data_piece, float):
                     if field_name in mult_100_fields:
