@@ -23,7 +23,7 @@ switch_status = True
 finished_on_ready = False
 
 leaderboard_instances = defaultdict(lambda: defaultdict(Leaderboard.Leaderboard))
-client = discord.Client()
+client = discord.Client(intents=discord.Intents.all())
 
 
 @client.event
@@ -101,6 +101,10 @@ def private_data_init():
         testing_bot_key = f.readline().strip("\n")
         bot_key = f.readline().strip("\n")
 
+
+    
+
+
 @client.event
 async def on_ready():
     global finished_on_ready
@@ -108,14 +112,17 @@ async def on_ready():
         Leaderboard.load_player_pickle_data()
         Leaderboard.load_stats_in()
         Shared.load_blacklisted_users()
+        #Leaderboard.dump_data_to_csv() #Uncomment to dump the pulled data to a csv
         
         leaderboard_pull.start()
         removeInactiveInstances.start()
         updatePresence.start()
         checkBotAbuse.start()
         backup.start()
+        
         print("Finished on ready.")
         finished_on_ready = True
+    
     
 
 def on_exit():

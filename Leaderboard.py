@@ -24,16 +24,12 @@ long_delete = 30
 lounge_player_data_rt = None
 lounge_player_data_ct = None
 global_cached = {}
-__rt_main_url_deprecated = "https://mariokartboards.com/lounge/json/player.php?type=rt&all"
-__ct_main_url_deprecated = "https://mariokartboards.com/lounge/json/player.php?type=ct&all"
-__rt_specific_url_deprecated = "https://mariokartboards.com/lounge/json/player.php?type=rt&name="
-__ct_specific_url_deprecated = "https://mariokartboards.com/lounge/json/player.php?type=ct&name="
 
-rt_specific_url = "https://mariokartboards.com/lounge/json/leaderboard.php?type=rt"
-ct_specific_url = "https://mariokartboards.com/lounge/json/leaderboard.php?type=ct"
+rt_specific_url = "https://mariokartboards.com/lounge/api/ladderplayer.php?ladder_id=1&all=1"
+ct_specific_url = "https://mariokartboards.com/lounge/api/ladderplayer.php?ladder_id=2&all=1"
 
 currently_pulling = True
-interval_time = 20 #wait this many seconds between each ping to mkboards.com
+interval_time = 1 #wait this many seconds between each ping to mkboards.com
 extra_wait_time = 20
 chunk_size = 25
 time_between_pulls = timedelta(hours=4)
@@ -69,6 +65,56 @@ leaderboard_type_terms = {'rt', 'ct'}
 blacklist_user_terms = {"blacklistuser", "banuser", "ban"}
 remove_blacklist_user_terms = {"unban", "unbanuser", "removeban", "unblacklist", "unblacklistuser", "removeblacklist", "blacklistuserremove"}
 check_blacklist_terms = {"blacklist", "check", "checkblacklist", "displayblacklist", "banlist"}
+inrole_terms = {'inrole'}
+"""
+{
+   "player_id":"260",
+   "player_name":"Az",
+   "player_country_flag":"jp",
+   "base_mmr":"11117",
+   "base_lr":"4605",
+   "strikes":"0",
+   "current_mmr":"11429",
+   "current_lr":"9067",
+   "peak_mmr":"11709",
+   "peak_lr":"9067",
+   "lowest_mmr":"10561",
+   "lowest_lr":"4605",
+   "wins":"25",
+   "loss":"7",
+   "max_gain_mmr":"266",
+   "max_gain_lr":"282",
+   "max_loss_mmr":"-457",
+   "max_loss_lr":"-150",
+   "win_percentage":"0.78125",
+   "gainloss10_mmr":"868",
+   "gainloss10_lr":"1830",
+   "wins10":"9",
+   "loss10":"1",
+   "win10_percentage":"0.9",
+   "win_streak":"3",
+   "top_score":"124",
+   "average_score":"97.5938",
+   "average10_score":"104.9",
+   "std_score":"14.8216",
+   "std10_score":"9.25689",
+   "total_events":"32",
+   "penalties":"0",
+   "max_strikes":"5",
+   "ranking":"1",
+   "percentile":"99.8733",
+   "previous_ranking":"1",
+   "previous_percentile":"99.8731",
+   "last_event_date":"2021-08-14 01:00:34",
+   "total_events_since_date":"32",
+   "since_date":null,
+   "update_date":"2021-08-14 01:00:34",
+   "current_division":"Ruby",
+   "current_class":"Class X",
+   "url":"https:\/\/mariokartboards.com\/lounge\/ladder\/player.php?player_id=260&ladder_id=1",
+   "current_emblem":"https:\/\/mariokartboards.com\/lounge\/images\/emblems\/ruby.png"
+}
+"""
 #key is command arg, tuple is:
 #field name in the JSON, embed name, time filter, and reversed, minimum events needed
 stat_terms = {'avg10':('average10_score', "Current Average (Last 10)", True, True, 5),
@@ -187,20 +233,20 @@ def load_player_pickle_data():
                 ct_last_updated = datetime.now()
             
 
-#JSON Data corruption checks - No longer used since new Lounge API is favored     
-def __all_player_is_corrupt_deprecated(json_data):
-    if not isinstance(json_data, list):
-        return True
-    if len(json_data) < 1:
-        return True
-    
-    for item in json_data:
-        if not isinstance(item, dict):
-            return True
-        if 'pid' not in item or 'name' not in item or not isinstance(item['pid'], int) or not isinstance(item['name'], str):
-            return True
-    return False
 
+def isfloat(value:str):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+    
+def isint(value:str):
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
 
 def detailed_players_is_corrupt(json_data, caller_checks_null=True):
     if not isinstance(json_data, list):
@@ -216,30 +262,29 @@ def detailed_players_is_corrupt(json_data, caller_checks_null=True):
             if 'name' in player and player['name'] is None:
                 continue
          
-         
-        if 'pid' in player and isinstance(player['pid'], int) \
+        if 'pid' in player and isinstance(player['pid'], str) and isint(player['pid'])\
         and 'name' in player and isinstance(player['name'], str) \
-        and 'strikes' in player and isinstance(player['strikes'], int) \
-        and 'current_mmr' in player and isinstance(player['current_mmr'], int) \
-        and 'peak_mmr' in player and isinstance(player['peak_mmr'], int) \
-        and 'lowest_mmr' in player and isinstance(player['lowest_mmr'], int) \
-        and 'wins' in player and isinstance(player['wins'], int) \
-        and 'loss' in player and isinstance(player['loss'], int) \
-        and 'max_gain_mmr' in player and isinstance(player['max_gain_mmr'], int) \
-        and 'max_loss_mmr' in player and isinstance(player['max_loss_mmr'], int) \
-        and 'win_percentage' in player and isinstance(player['win_percentage'], (float, int)) \
-        and 'gainloss10_mmr' in player and isinstance(player['gainloss10_mmr'], int) \
-        and 'wins10' in player and isinstance(player['wins10'], int) \
-        and 'loss10' in player and isinstance(player['loss10'], int) \
-        and 'win10_percentage' in player and isinstance(player['win10_percentage'], (float, int)) \
-        and 'win_streak' in player and isinstance(player['win_streak'], int) \
-        and 'top_score' in player and isinstance(player['top_score'], int) \
-        and 'average_score' in player and isinstance(player['average_score'], (float, int)) \
-        and 'average10_score' in player and isinstance(player['average10_score'], (float, int)) \
-        and 'total_wars' in player and isinstance(player['total_wars'], int) \
-        and 'penalties' in player and isinstance(player['penalties'], int) \
-        and 'total_strikes' in player and isinstance(player['total_strikes'], int) \
-        and 'ranking' in player and isinstance(player['ranking'], str) and (player['ranking'].isnumeric() or player['ranking'] == "Unranked") \
+        and 'strikes' in player and isinstance(player['strikes'], str) and isint(player['strikes'])\
+        and 'current_mmr' in player and isinstance(player['current_mmr'], str) and isint(player['current_mmr'])\
+        and 'peak_mmr' in player and isinstance(player['peak_mmr'], str) and isint(player['peak_mmr'])\
+        and 'lowest_mmr' in player and isinstance(player['lowest_mmr'], str) and isint(player['lowest_mmr'])\
+        and 'wins' in player and isinstance(player['wins'], str) and isint(player['wins'])\
+        and 'loss' in player and isinstance(player['loss'], str) and isint(player['loss'])\
+        and 'max_gain_mmr' in player and isinstance(player['max_gain_mmr'], str) and isint(player['max_gain_mmr'])\
+        and 'max_loss_mmr' in player and isinstance(player['max_loss_mmr'], str) and isint(player['max_loss_mmr'])\
+        and 'win_percentage' in player and isinstance(player['win_percentage'], str) and isfloat(player['win_percentage']) \
+        and 'gainloss10_mmr' in player and isinstance(player['gainloss10_mmr'], str) and isint(player['gainloss10_mmr'])\
+        and 'wins10' in player and isinstance(player['wins10'], str) and isint(player['wins10'])\
+        and 'loss10' in player and isinstance(player['loss10'], str) and isint(player['loss10'])\
+        and 'win10_percentage' in player and isinstance(player['win10_percentage'], str) and isfloat(player['win10_percentage'])\
+        and 'win_streak' in player and isinstance(player['win_streak'], str) and isint(player['win_streak'])\
+        and 'top_score' in player and isinstance(player['top_score'], str) and isint(player['top_score'])\
+        and 'average_score' in player and isinstance(player['average_score'], str) and isfloat(player['average_score'])\
+        and 'average10_score' in player and isinstance(player['average10_score'], str) and isfloat(player['average10_score'])\
+        and 'total_wars' in player and isinstance(player['total_wars'], str) and isint(player['total_wars']) \
+        and 'penalties' in player and isinstance(player['penalties'], str) and isint(player['penalties']) \
+        and 'total_strikes' in player and isinstance(player['total_strikes'], str) and isint(player['total_strikes']) \
+        and 'ranking' in player and isinstance(player['ranking'], str) and (isint(player['ranking']) or player['ranking'] == "Unranked") \
         and 'update_date' in player and isinstance(player['update_date'], str) \
         and 'url' in player and isinstance(player['url'], str):
             continue
@@ -249,16 +294,12 @@ def detailed_players_is_corrupt(json_data, caller_checks_null=True):
         return True
     return False
 
-#TODO: Fix this
-
-
 
 """Pulling data from API"""
 async def pull_API_data(new_full_data_dict, is_rt=True):
-    await asyncio.sleep(interval_time)
+    #await asyncio.sleep(interval_time)
     success = True
     specific_url = rt_specific_url if is_rt else ct_specific_url
-
     chunk_data = None
     for i in range(5):
         try:
@@ -284,6 +325,29 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
             if player['name'].endswith("_false"):
                 continue
             
+            player['pid'] = int(player['pid'])
+            player['strikes'] = int(player['strikes'])
+            player['current_mmr'] = int(player['current_mmr'])
+            player['peak_mmr'] = int(player['peak_mmr'])
+            player['lowest_mmr'] = int(player['lowest_mmr'])
+            player['wins'] = int(player['wins'])
+            player['loss'] = int(player['loss'])
+            player['max_gain_mmr'] = int(player['max_gain_mmr'])
+            player['max_loss_mmr'] = int(player['max_loss_mmr'])
+            player['win_percentage'] = float(player['win_percentage'])
+            player['gainloss10_mmr'] = int(player['gainloss10_mmr'])
+            player['wins10'] = int(player['wins10'])
+            player['loss10'] = int(player['loss10'])
+            player['win10_percentage'] = float(player['win10_percentage'])
+            player['win_streak'] = int(player['win_streak'])
+            player['top_score'] = int(player['top_score'])
+            player['average_score'] = float(player['average_score'])
+            player['average10_score'] = float(player['average10_score'])
+            player['total_wars'] = int(player['total_wars'])
+            player['penalties'] = int(player['penalties'])
+            player['total_strikes'] = int(player['total_strikes'])
+            player['ranking'] = int(player['ranking'])           
+            
             try:
                 if isinstance(player['update_date'], str):
                     player['update_date'] = datetime.strptime(player['update_date'], '%Y-%m-%d %H:%M:%S')
@@ -297,116 +361,6 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
                 
     return success
         
-
-"""Pulling data from API"""
-async def __pull_chunk_deprecated(player_name:List[str], new_full_data_dict, is_rt=True):
-    await asyncio.sleep(interval_time)
-    success = True
-    specific_url = __rt_specific_url_deprecated if is_rt else __ct_specific_url_deprecated
-    specific_url += ",".join(player_name).replace(" ","")
-    chunk_data = None
-    for i in range(5):
-        try:
-            chunk_data = await Shared.fetch(specific_url)
-            chunk_is_corrupt = detailed_players_is_corrupt(chunk_data, False)
-            if chunk_is_corrupt:
-                print("Chunk was corrupt")
-            else:
-                break
-        except:
-            print("Failed to send url request, attempt #" + str(i))
-        if i < 4:
-            await asyncio.sleep(interval_time*(i+1)) #We wait an increasing amount of time if we fail, we try 5 times remember
-    else: #not breaking the loop means we failed 5 times
-        success = False
-    
-    if success and chunk_data != None:
-        for player in chunk_data:
-            if player['ranking'] == 'Unranked':
-                continue
-            try:
-                if isinstance(player['update_date'], str):
-                    player['update_date'] = datetime.strptime(player['update_date'], '%Y-%m-%d %H:%M:%S')
-                else:
-                    player['update_date'] = datetime.min
-            except:
-                print(player['update_date'])
-                player['update_date'] = datetime.min
-            new_full_data_dict[player['pid']] = player
-            
-                
-    return success
-        
-
-#Returns False is there was an error pulling the data - deprecated in favor of pull_all_data
-#since that uses the new Leaderboard API, which means pinging only once 
-async def __pull_all_data_deprecated(is_rt=True):
-    global lounge_player_data_ct
-    global ct_last_updated
-    global lounge_player_data_rt
-    global rt_last_updated
-    global rt_progress
-    global ct_progress
-
-    all_players = None
-    success = True
-    main_url = __rt_main_url_deprecated if is_rt else __ct_main_url_deprecated
-    new_dict_data = {}
-    
-    try:
-        all_players = await Shared.fetch(main_url)
-    except:
-        success = False
-    data_is_corrupt = __all_player_is_corrupt_deprecated(all_players)
-    if data_is_corrupt:
-        success = False
-    else:
-        #do good stuff
-        all_players.sort(key=lambda x:x['pid'])
-        next_chunk = []
-        
-        for i, player in enumerate(all_players):
-            if player['name'].endswith("_false"):
-                continue
-            next_chunk.append(player['name'])
-            
-            
-            if len(next_chunk) == chunk_size:
-                chunk_success = await __pull_chunk_deprecated(next_chunk, new_dict_data, is_rt)
-                if not chunk_success:
-                    print("Failed to pull chunk.")
-                    success = False
-                    break
-                next_chunk = []
-                if is_rt:
-                    rt_progress = round( (i/len(all_players))*100, 1)
-                    
-                else:
-                    ct_progress = round( (i/len(all_players))*100, 1)
-
-    
-        else:
-            if len(next_chunk) > 0:
-                chunk_success = await __pull_chunk_deprecated(next_chunk, new_dict_data, is_rt)
-                if not chunk_success:
-                    print("Failed to pull chunk.")
-                    success = False   
-                 
-                    
-    if success:
-        if is_rt:
-            lounge_player_data_rt = new_dict_data
-            rt_last_updated = datetime.now()
-        else:
-            lounge_player_data_ct = new_dict_data
-            ct_last_updated = datetime.now() 
-            
-    if is_rt:
-        rt_progress = 100.0
-    else:
-        ct_progress = 100.0
-                        
-    return success
 
 
 """endcollapse"""
@@ -481,6 +435,15 @@ class Leaderboard(object):
     def is_leaderboard_command(self, message:str, prefix:str=Shared.prefix):
         return Shared.is_in(message, leaderboard_terms, prefix)
     
+    def is_inrole_command(self, message:str, prefix:str=Shared.prefix):
+        return Shared.is_in(message, inrole_terms, prefix)
+    
+    def is_inrole_command_allowed(self, message:discord.Message):
+        valid_channels = {389521626645004302}
+        valid_categories = {430167221600518174}
+        return message.channel.id in valid_channels or message.channel.category_id in valid_categories
+        
+    
     def is_blacklist_command(self, message:str, prefix:str=Shared.prefix):
         return Shared.is_in(message, blacklist_user_terms, prefix)
     def is_remove_blacklist_command(self, message:str, prefix:str=Shared.prefix):
@@ -532,6 +495,76 @@ class Leaderboard(object):
         last_updated_str += ", ".join(stuffs) + " ago"
         return last_updated_str
     
+    async def send_inrole_message(self, client, message:discord.Message, prefix=Shared.prefix):
+        
+        # roles = await ctx.guild.fetch_roles().flatten()
+        roleName = " ".join(message.content.split()[1:])
+        roles = message.guild.roles
+        role = None
+        for r in roles:
+            if r.name.lower().replace(" ", "") == roleName.lower().replace(" ", ""):
+                role = r
+                break
+                
+        if role == None:
+            await message.channel.send("That role doesn't exist.")
+        else:
+            members = await message.guild.fetch_members(limit=None).flatten()
+            
+            filtered_members = sorted(map(lambda member: f"{member.display_name} ({str(member)})", filter(lambda member: role in member.roles, members)), key=lambda s:s.upper())
+            current_page = 0
+            max_page = ((len(filtered_members) - 1)//20)
+            new_embed = discord.Embed(
+                title=f"Members with the {role.name} role:",
+                colour = discord.Colour.dark_blue(),
+                description='\n'.join(filtered_members[0:20]))
+            new_embed.set_footer(text=f"{current_page+1}/{max_page+1}")
+    
+            def check(reaction, user):
+                return user == message.author and str(reaction.emoji) in {LEFT_ARROW_EMOTE, RIGHT_ARROW_EMOTE}
+    
+            if len(filtered_members) <= 20:
+                await message.channel.send(embed=new_embed)
+                return
+            else:
+                embed_page_start_time = datetime.now()
+                sent_missing_perms_message = False
+                msg = await message.channel.send(embed=new_embed)
+                await msg.add_reaction(LEFT_ARROW_EMOTE)
+                await msg.add_reaction(RIGHT_ARROW_EMOTE)
+                while (datetime.now() - embed_page_start_time) < embed_page_time:
+
+                    timeout_time_delta = embed_page_time - (datetime.now() - embed_page_start_time)
+                    timeout_seconds = timeout_time_delta.total_seconds()
+                    if timeout_seconds <= 0:
+                        break
+        
+                    try:
+                        reaction, user = await client.wait_for('reaction_add', timeout=timeout_seconds, check=check)
+                        if(str(reaction.emoji) == LEFT_ARROW_EMOTE):
+                            current_page = (current_page - 1) % (max_page + 1)
+                        else:
+                            current_page = (current_page + 1) % (max_page + 1)
+
+                        new_embed.description = '\n'.join(filtered_members[20*current_page:(20*(current_page+1))])
+                        new_embed.set_footer(text=f"{current_page+1}/{max_page+1}")
+                        await msg.edit(embed=new_embed)
+
+                    except asyncio.TimeoutError:
+                        break
+                
+                try:
+                    await msg.clear_reaction(LEFT_ARROW_EMOTE)
+                    await msg.clear_reaction(RIGHT_ARROW_EMOTE)
+                except discord.errors.Forbidden:
+                    try:
+                        await msg.remove_reaction(LEFT_ARROW_EMOTE, client.user)
+                        await msg.remove_reaction(RIGHT_ARROW_EMOTE, client.user)
+                    except:
+                        pass
+                    if message.guild != None and not sent_missing_perms_message:
+                        await Shared.send_missing_permissions(message.channel)
+
     """#TODO: Add reaction text"""
     def get_extra_text(self, is_rt=True, is_dm=False):
         total_message = "- Data updates every " + str(int(time_between_pulls.total_seconds())//3600) + " hours"
@@ -571,14 +604,15 @@ class Leaderboard(object):
                     continue
                 if player['update_date'] < date_cutoff:
                     continue
-                if field_name == 'win_streak' and player['wins10'] < player['win_streak']:
+                #The +1 is to allow them to sub once, and 
+                if field_name == 'win_streak' and (player['wins10']+1) < player['win_streak'] and player['wins10'] < 10:
                     continue
                 to_sort.append(player)
         else:
             for player in player_data.values():
                 if player['total_wars'] < minimum_events_needed:
                     continue
-                if field_name == 'win_streak' and player['wins10'] < player['win_streak']:
+                if field_name == 'win_streak' and (player['wins10']+1) < player['win_streak'] and player['wins10'] < 10:
                     continue
                 to_sort.append(player)
             
@@ -779,6 +813,11 @@ class Leaderboard(object):
                 pass
             elif self.can_send_leaderboard():
                 await self.send_leaderboard_message(client, message, prefix)
+        if self.is_inrole_command(message.content, prefix):
+            if await Shared.process_blacklist(client, message):
+                pass
+            if self.is_inrole_command_allowed(message):
+                await self.send_inrole_message(client, message, prefix)
         if self.is_blacklist_command(message.content, prefix):
             if Shared.can_blacklist(message.author):
                 await Shared.blacklist(message)
