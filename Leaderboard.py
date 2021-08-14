@@ -58,6 +58,7 @@ FULL_RIGHT_ARROW_EMOTE = '\u23ed'
 
 #await client.add_reaction(message,'\u25b6')'
 
+player_id_json_name = 'player_id'
 
 
 leaderboard_terms = {"leader", "leaderboard", "ldr", "board"}
@@ -261,8 +262,10 @@ def detailed_players_is_corrupt(json_data, caller_checks_null=True):
         if caller_checks_null:
             if 'name' in player and player['name'] is None:
                 continue
+            
+        
          
-        if 'pid' in player and isinstance(player['pid'], str) and isint(player['pid'])\
+        if player_id_json_name in player and isinstance(player[player_id_json_name], str) and isint(player[player_id_json_name])\
         and 'name' in player and isinstance(player['name'], str) \
         and 'strikes' in player and isinstance(player['strikes'], str) and isint(player['strikes'])\
         and 'current_mmr' in player and isinstance(player['current_mmr'], str) and isint(player['current_mmr'])\
@@ -325,7 +328,7 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
             if player['name'].endswith("_false"):
                 continue
             
-            player['pid'] = int(player['pid'])
+            player[player_id_json_name] = int(player[player_id_json_name])
             player['strikes'] = int(player['strikes'])
             player['current_mmr'] = int(player['current_mmr'])
             player['peak_mmr'] = int(player['peak_mmr'])
@@ -356,7 +359,7 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
             except:
                 print(player['update_date'])
                 player['update_date'] = datetime.min
-            new_full_data_dict[player['pid']] = player
+            new_full_data_dict[player[player_id_json_name]] = player
             
                 
     return success
