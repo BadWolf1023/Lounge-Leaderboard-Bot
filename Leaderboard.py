@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 import asyncio
 import dill as p
 import os
+from collections import defaultdict
 
 medium_delete = 10
 long_delete = 30
@@ -101,12 +102,8 @@ blacklist_user_terms = {"blacklistuser", "banuser", "ban"}
 remove_blacklist_user_terms = {"unban", "unbanuser", "removeban", "unblacklist", "unblacklistuser", "removeblacklist", "blacklistuserremove"}
 check_blacklist_terms = {"blacklist", "check", "checkblacklist", "displayblacklist", "banlist"}
 inrole_terms = {'inrole'}
-"""
-   "player_country_flag":"jp",
-   "current_mmr":"11429",
-   "current_lr":"9067",
-   "win_streak":"3",
-"""
+
+
 #key is command arg, tuple is:
 #field name in the JSON, embed name, time filter, and reversed, minimum events needed
 stat_terms = {'avg10':(player_average_score_last_10_json_name, "Current Average (Last 10)", True, True, 5),
@@ -132,9 +129,9 @@ stat_terms = {'avg10':(player_average_score_last_10_json_name, "Current Average 
               'winstreak':(player_win_streak_json_name, "Current Win Streak", True, True, -1),
               'avg':(player_average_score_json_name, "Current Average", False, True, 10),
               'events':(player_events_played_json_name, "Events Played", False, True, -1),
-              'country':(player_country_json_name, "Events Played", False, True, -1),
+              'country':(player_country_json_name, "Players in Country", False, True, -1),
               }
-mult_100_fields = {"win_percentage"}
+mult_100_fields = {player_win_percentage_json_name}
 
 
 stats_count = None
@@ -225,6 +222,8 @@ def load_player_pickle_data():
                     print("Could not read lounge player rts in.")
                     lounge_player_data_rt = {}
                 rt_last_updated = datetime.now()
+        else:
+            print("rts.pkl doesn't exist, so no cached data loaded in")
     if lounge_player_data_ct == None:
         if os.path.exists('cts.pkl'):
             with open('cts.pkl', "rb") as pickle_in:
@@ -234,7 +233,8 @@ def load_player_pickle_data():
                     print("Could not read lounge player cts in.")
                     lounge_player_data_ct = {}
                 ct_last_updated = datetime.now()
-            
+        else:
+            print("cts.pkl doesn't exist, so no cached data loaded in")
 
 
 def isfloat(value:str):
@@ -252,10 +252,13 @@ def isint(value:str):
         return False
 
 def detailed_players_is_corrupt(json_data, caller_checks_null=True):
-    if not isinstance(json_data, list):
+    if json_data is None or not isinstance(json_data, dict):
         return True
+    if "results" not in json_data or not isinstance(json_data["results"], list):
+        return True
+
     #update_date":"2020-11-02 23:41:22"
-    for player in json_data:
+    for player in json_data["results"]:
         
         if not isinstance(player, dict):
             return True
@@ -263,6 +266,7 @@ def detailed_players_is_corrupt(json_data, caller_checks_null=True):
         #We'll allow this, 
         if caller_checks_null:
             if player_name_json_name in player and player[player_name_json_name] is None:
+                print("no player name")
                 continue
         
 
@@ -332,11 +336,11 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
         success = False
     
     if success and chunk_data != None:
-        for player in chunk_data:
-            if player[player_name_json_name] == None:
+        for player in chunk_data["results"]:
+            if player[player_name_json_name] is None:
                 continue
-            if player['ranking'] == 'Unranked':
-                continue
+            #if player[player_ranking_json_name] == 'Unranked':
+            #    continue
             if player[player_name_json_name].endswith("_false"):
                 continue
 
@@ -374,16 +378,16 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
             player[player_std_score_last_10_json_name] = float(player[player_std_score_last_10_json_name])
             player[player_events_played_json_name] = int(player[player_events_played_json_name])
             player[player_penalties_json_name] = int(player[player_penalties_json_name])
-            player[player_ranking_json_name] = int(player[player_ranking_json_name])      
+            #player[player_ranking_json_name] = int(player[player_ranking_json_name])      
             
             try:
-                if isinstance(player['update_date'], str):
-                    player['update_date'] = datetime.strptime(player['update_date'], '%Y-%m-%d %H:%M:%S')
+                if isinstance(player[player_last_event_date_json_name], str):
+                    player[player_last_event_date_json_name] = datetime.strptime(player[player_last_event_date_json_name], '%Y-%m-%d %H:%M:%S')
                 else:
-                    player['update_date'] = datetime.min
+                    player[player_last_event_date_json_name] = datetime.min
             except:
-                print(player['update_date'])
-                player['update_date'] = datetime.min
+                print(player[player_last_event_date_json_name])
+                player[player_last_event_date_json_name] = datetime.min
             new_full_data_dict[player[player_id_json_name]] = player
             
                 
@@ -615,7 +619,7 @@ class Leaderboard(object):
         total_message += cooldown_message
         return total_message
     
-    def __get_results(self, command_name, field_name, date_filter, should_reverse, minimum_events_needed, x_number, is_rt=True):
+    def __get_results(self, command_name, field_name, date_filter, should_reverse, minimum_events_needed, x_number, is_rt=True, is_country_count=False):
         if is_rt not in global_cached:
             global_cached[is_rt] = {}
             
@@ -624,26 +628,32 @@ class Leaderboard(object):
         
         to_sort = []
         player_data = lounge_player_data_rt if is_rt else lounge_player_data_ct
-        
-        if date_filter:
-            date_cutoff = datetime.now() - date_filter_time
-            for player in player_data.values():
-                if player['total_wars'] < minimum_events_needed:
-                    continue
-                if player['update_date'] < date_cutoff:
-                    continue
-                #The +1 is to allow them to sub once, and 
-                if field_name == 'win_streak' and (player['wins10']+1) < player['win_streak'] and player['wins10'] < 10:
-                    continue
-                to_sort.append(player)
+        if not is_country_count:
+            if date_filter:
+                date_cutoff = datetime.now() - date_filter_time
+                for player in player_data.values():
+                    if player[player_events_played_json_name] < minimum_events_needed:
+                        continue
+                    if player[player_last_event_date_json_name] < date_cutoff:
+                        continue
+                    #The +1 is to allow them to sub once, and 
+                    if field_name == player_win_streak_json_name and (player[player_wins_last_10_json_name]+1) < player[player_win_streak_json_name] and player[player_wins_last_10_json_name] < 10:
+                        continue
+                    to_sort.append(player)
+            else:
+                for player in player_data.values():
+                    if player[player_events_played_json_name] < minimum_events_needed:
+                        continue
+                    if field_name == player_win_streak_json_name and (player[player_wins_last_10_json_name]+1) < player[player_win_streak_json_name] and player[player_wins_last_10_json_name] < 10:
+                        continue
+                    to_sort.append(player)
         else:
+            country_counter = defaultdict(int)
             for player in player_data.values():
-                if player['total_wars'] < minimum_events_needed:
-                    continue
-                if field_name == 'win_streak' and (player['wins10']+1) < player['win_streak'] and player['wins10'] < 10:
-                    continue
-                to_sort.append(player)
-            
+                country_counter[player[field_name]] += 1
+            for country, players_in_country in country_counter.items():
+                to_sort.append({field_name:(players_in_country, country)})
+        
         to_sort.sort(key=lambda p:p[field_name], reverse=should_reverse)
         results = to_sort[:x_number]
         global_cached[is_rt][command_name] = results
@@ -688,11 +698,12 @@ class Leaderboard(object):
                     if not still_booting:
                         #=========== Zero in here ============
                         field_name, embed_name, date_filter, should_reverse, minimum_events_needed = stat_terms[command_end[1].lower()]
-                        results = self.__get_results(command_end[1].lower(), field_name, date_filter, should_reverse, minimum_events_needed, TOP_N_RESULTS, is_rt)
+                        is_country_count = field_name == player_country_json_name
+                        results = self.__get_results(command_end[1].lower(), field_name, date_filter, should_reverse, minimum_events_needed, TOP_N_RESULTS, is_rt, is_country_count)
                         
                         is_dm = message.guild == None
                         page_num = 1
-                        first_page_embed = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm)             
+                        first_page_embed = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm, is_country_count)             
                         embed_message = await Shared.safe_send(message.channel, embed=first_page_embed)
                         
                         try:
@@ -735,7 +746,7 @@ class Leaderboard(object):
                                 if page_num < 5:
                                     page_num += 1
                                     
-                            embed_page = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm)
+                            embed_page = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm, is_country_count)
                                 
                             try:
                                 await embed_message.edit(embed=embed_page, suppress=False)
@@ -760,7 +771,7 @@ class Leaderboard(object):
                             
                         
                         
-    def get_embed_page(self, page_num, results, is_rt, embed_name, field_name, is_dm=False) -> discord.Embed:
+    def get_embed_page(self, page_num, results, is_rt, embed_name, field_name, is_dm=False, is_country_count=False) -> discord.Embed:
         embed_name = ("RT - " if is_rt else "CT - ") + embed_name + " - Page " + str(page_num) + "/5"
         embed = discord.Embed(
                     title = embed_name,
@@ -771,16 +782,16 @@ class Leaderboard(object):
         to_display = results[(page_num-1)*10:(page_num*10)]
         
         if len(to_display) > 1:
-            for rank, player in enumerate(to_display, start=((page_num-1)*10)+1):
-                player_name = player[player_name_json_name]
-                data_piece = player[field_name]
+            for rank, data in enumerate(to_display, start=((page_num-1)*10)+1):
+                player_name = data[player_name_json_name] if not is_country_count else Shared.get_country_name(data[field_name][1])
+                data_piece = data[field_name] if not is_country_count else data[field_name][0]
                 if isinstance(data_piece, float):
                     if field_name in mult_100_fields:
                         data_piece = str(round((data_piece*100), 1)) + "%"
                     else:
                         data_piece = round(data_piece, 1)
                 data_piece = str(data_piece)
-                value_field = "[\u200b\u200b" + data_piece + "](" + player['url'] + ")"
+                value_field = f"[\u200b\u200b{data_piece}]({data['url']})" if not is_country_count else data_piece
                 embed.add_field(name=player_name, value=value_field, inline=False)
         else:
             embed.add_field(name="No more players", value="\u200b", inline=False)
@@ -792,7 +803,7 @@ class Leaderboard(object):
         
     
     
-    def get_top_x_stats_str(self, top_x=3):
+    def get_top_x_stats_str(self, top_x=5):
         rt_top = sorted(total_stats['rt'].items(), key=lambda item: item[1], reverse=True)
         ct_top = sorted(total_stats['ct'].items(), key=lambda item: item[1], reverse=True)
         
@@ -805,7 +816,7 @@ class Leaderboard(object):
             total_str += "- " + field_name + ": " + str(amount) + " commands\n"
         return total_str
     
-    async def send_stats(self, message, top_x=3):
+    async def send_stats(self, message, top_x=5):
         if message.guild == None:
             self.last_stats_sent = None
         else:
