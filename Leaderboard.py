@@ -41,7 +41,7 @@ ct_progress = 0.0
 date_filter_time = timedelta(days=14)
 TOP_N_RESULTS = 50
 
-LEADERBOARD_WAIT_TIME = timedelta(seconds=20)
+LEADERBOARD_WAIT_TIME = timedelta(seconds=10)
 STATS_WAIT_TIME = timedelta(seconds=10)
 inactivity_time_period = timedelta(minutes=30)
 
@@ -59,7 +59,7 @@ FULL_RIGHT_ARROW_EMOTE = '\u23ed'
 
 player_id_json_name = "player_id"
 player_name_json_name = "player_name"
-player_flag_json_name = "player_country_flag"
+player_country_json_name = "player_country_flag"
 player_base_mmr_json_name = "base_mmr"
 player_base_lr_json_name = "base_lr"
 player_strikes_json_name = "strikes"
@@ -102,74 +102,37 @@ remove_blacklist_user_terms = {"unban", "unbanuser", "removeban", "unblacklist",
 check_blacklist_terms = {"blacklist", "check", "checkblacklist", "displayblacklist", "banlist"}
 inrole_terms = {'inrole'}
 """
-{player_id, player_name, current_mmr, current_lr, 
-   "player_id":"260",
-   "player_name":"Az",
    "player_country_flag":"jp",
-   "base_mmr":"11117",
-   "base_lr":"4605",
-   "strikes":"0",
    "current_mmr":"11429",
    "current_lr":"9067",
-   "peak_mmr":"11709",
-   "peak_lr":"9067",
-   "lowest_mmr":"10561",
-   "lowest_lr":"4605",
-   "wins":"25",
-   "loss":"7",
-   "max_gain_mmr":"266",
-   "max_gain_lr":"282",
-   "max_loss_mmr":"-457",
-   "max_loss_lr":"-150",
-   "win_percentage":"0.78125",
-   "gainloss10_mmr":"868",
-   "gainloss10_lr":"1830",
-   "wins10":"9",
-   "loss10":"1",
-   "win10_percentage":"0.9",
    "win_streak":"3",
-   "top_score":"124",
-   "average_score":"97.5938",
-   "average10_score":"104.9",
-   "std_score":"14.8216",
-   "std10_score":"9.25689",
-   "total_events":"32",
-   "penalties":"0",
-   "max_strikes":"5",
-   "ranking":"1",
-   "percentile":"99.8733",
-   "previous_ranking":"1",
-   "previous_percentile":"99.8731",
-   "last_event_date":"2021-08-14 01:00:34",
-   "total_events_since_date":"32",
-   "since_date":null,
-   "update_date":"2021-08-14 01:00:34",
-   "current_division":"Ruby",
-   "current_class":"Class X",
-   "url":"https:\/\/mariokartboards.com\/lounge\/ladder\/player.php?player_id=260&ladder_id=1",
-   "current_emblem":"https:\/\/mariokartboards.com\/lounge\/images\/emblems\/ruby.png"
-}
 """
 #key is command arg, tuple is:
 #field name in the JSON, embed name, time filter, and reversed, minimum events needed
-stat_terms = {'avg10':('average10_score', "Current Average (Last 10)", True, True, 5),
-              'topscore':('top_score', 'Top Score', False, True, -1),
-              'mmr':('current_mmr', "Current MMR", False, True, 5),
-              'lr':('current_lr', "Current LR", False, True, 5),
-              'mmrgain10':('gainloss10_mmr', "Current MMR Gained (Last 10)", True, True, -1),
-              'mmrloss10':('gainloss10_mmr', "Current MMR Lost (Last 10)", True, False, -1),
-              'pens':('penalties', "Most Penalties", False, False, -1),
-              'peakmmr':('peak_mmr', "Peak MMR", False, True, 5),
-              'wins':('wins', "Most Wins", False, True, -1),
-              'losses':('loss', "Most Losses", False, True, -1),
-              'maxgain':('max_gain_mmr', "Largest MMR Gain", False, True, -1),
-              'maxloss':('max_loss_mmr', "Largest MMR Loss", False, False, -1),
-              'winpercentage':('win_percentage', "Win Percentage", True, True, 10),
-              'wins10':('wins10', "Current Wins (Last 10)", True, True, -1),
-              'losses10':('loss10', "Current Losses (Last 10)", True, True, -1),
-              'winstreak':('win_streak', "Current Win Streak", True, True, -1),
-              'avg':('average_score', "Current Average", False, True, 10),
-              'events':('total_wars', "Events Played", False, True, -1)
+stat_terms = {'avg10':(player_average_score_last_10_json_name, "Current Average (Last 10)", True, True, 5),
+              'topscore':(player_top_score_json_name, 'Top Score', False, True, -1),
+              'mmr':(player_current_mmr_json_name, "Current MMR", False, True, 5),
+              'lr':(player_current_lr_json_name, "Current LR", False, True, 5),
+              'mmrgain10':(player_net_mmr_last_10_json_name, "Current MMR Gained (Last 10)", True, True, -1),
+              'lrgain10':(player_net_lr_last_10_json_name, "Current LR Gained (Last 10)", True, True, -1),
+              'mmrloss10':(player_net_mmr_last_10_json_name, "Current MMR Lost (Last 10)", True, False, -1),
+              'lrloss10':(player_net_lr_last_10_json_name, "Current LR Lost (Last 10)", True, False, -1),
+              'pens':(player_penalties_json_name, "Most Penalties", False, False, -1),
+              'peakmmr':(player_peak_mmr_json_name, "Peak MMR", False, True, 5),
+              'peaklr':(player_peak_lr_json_name, "Peak LR", False, True, 5),
+              'wins':(player_wins_json_name, "Most Wins", False, True, -1),
+              'losses':(player_losses_json_name, "Most Losses", False, True, -1),
+              'mostmmrgained':(player_most_mmr_gained_json_name, "Largest MMR Gain", False, True, -1),
+              'mostlrgained':(player_most_lr_gained_json_name, "Largest LR Gain", False, True, -1),
+              'mostmmrlost':(player_most_mmr_lost_json_name, "Largest MMR Loss", False, False, -1),
+              'mostlrlost':(player_most_lr_lost_json_name, "Largest LR Loss", False, False, -1),
+              'winpercentage':(player_win_percentage_json_name, "Win Percentage", True, True, 10),
+              'wins10':(player_wins_last_10_json_name, "Current Wins (Last 10)", True, True, -1),
+              'losses10':(player_losses_last_10_json_name, "Current Losses (Last 10)", True, True, -1),
+              'winstreak':(player_win_streak_json_name, "Current Win Streak", True, True, -1),
+              'avg':(player_average_score_json_name, "Current Average", False, True, 10),
+              'events':(player_events_played_json_name, "Events Played", False, True, -1),
+              'country':(player_country_json_name, "Events Played", False, True, -1),
               }
 mult_100_fields = {"win_percentage"}
 
@@ -214,7 +177,10 @@ def load_stats_in():
                 total_stats[type_key] = {}
                 for key in stat_terms:
                     total_stats[type_key][key] = 0
-        #TODO: add keys in
+        for type_key in leaderboard_type_terms:
+            for key in stat_terms:
+                if key not in total_stats[type_key]:
+                    total_stats[type_key][key] = 0
    
 def pickle_stats():
     with open(Shared.total_stats_file, "wb") as pickle_out:
@@ -302,7 +268,7 @@ def detailed_players_is_corrupt(json_data, caller_checks_null=True):
 
         if player_id_json_name in player and isinstance(player[player_id_json_name], str) and isint(player[player_id_json_name])\
         and player_name_json_name in player and isinstance(player[player_name_json_name], str) \
-        and player_flag_json_name in player and isinstance(player[player_flag_json_name], str)\
+        and player_country_json_name in player and isinstance(player[player_country_json_name], str)\
         and player_base_mmr_json_name in player and isinstance(player[player_base_mmr_json_name], str) and isint(player[player_base_mmr_json_name])\
         and player_base_lr_json_name in player and isinstance(player[player_base_lr_json_name], str) and isint(player[player_base_lr_json_name])\
         and player_strikes_json_name in player and isinstance(player[player_strikes_json_name], str) and isint(player[player_strikes_json_name])\
@@ -373,29 +339,42 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
                 continue
             if player[player_name_json_name].endswith("_false"):
                 continue
+
             
             player[player_id_json_name] = int(player[player_id_json_name])
-            player['strikes'] = int(player['strikes'])
-            player['current_mmr'] = int(player['current_mmr'])
-            player['peak_mmr'] = int(player['peak_mmr'])
-            player['lowest_mmr'] = int(player['lowest_mmr'])
-            player['wins'] = int(player['wins'])
-            player['loss'] = int(player['loss'])
-            player['max_gain_mmr'] = int(player['max_gain_mmr'])
-            player['max_loss_mmr'] = int(player['max_loss_mmr'])
-            player['win_percentage'] = float(player['win_percentage'])
-            player['gainloss10_mmr'] = int(player['gainloss10_mmr'])
-            player['wins10'] = int(player['wins10'])
-            player['loss10'] = int(player['loss10'])
-            player['win10_percentage'] = float(player['win10_percentage'])
-            player['win_streak'] = int(player['win_streak'])
-            player['top_score'] = int(player['top_score'])
-            player['average_score'] = float(player['average_score'])
-            player['average10_score'] = float(player['average10_score'])
-            player['total_wars'] = int(player['total_wars'])
-            player['penalties'] = int(player['penalties'])
-            player['total_strikes'] = int(player['total_strikes'])
-            player['ranking'] = int(player['ranking'])           
+            player[player_base_mmr_json_name] = int(player[player_base_mmr_json_name])
+            player[player_base_lr_json_name] = int(player[player_base_lr_json_name])
+            player[player_strikes_json_name] = int(player[player_strikes_json_name])
+            player[player_current_mmr_json_name] = int(player[player_current_mmr_json_name])
+            player[player_current_lr_json_name] = int(player[player_current_lr_json_name])
+            player[player_peak_mmr_json_name] = int(player[player_peak_mmr_json_name])
+            player[player_peak_lr_json_name] = int(player[player_peak_lr_json_name])
+            player[player_lowest_mmr_json_name] = int(player[player_lowest_mmr_json_name])
+            player[player_lowest_lr_json_name] = int(player[player_lowest_lr_json_name])
+            player[player_wins_json_name] = int(player[player_wins_json_name])
+            player[player_losses_json_name] = int(player[player_losses_json_name])
+            
+            player[player_most_mmr_gained_json_name] = int(player[player_most_mmr_gained_json_name])
+            player[player_most_lr_gained_json_name] = int(player[player_most_lr_gained_json_name])
+            
+            player[player_most_mmr_lost_json_name] = int(player[player_most_mmr_lost_json_name])
+            player[player_most_lr_lost_json_name] = int(player[player_most_lr_lost_json_name])
+            
+            player[player_win_percentage_json_name] = float(player[player_win_percentage_json_name])
+            player[player_net_mmr_last_10_json_name] = int(player[player_net_mmr_last_10_json_name])
+            player[player_net_lr_last_10_json_name] = int(player[player_net_lr_last_10_json_name])
+            player[player_wins_last_10_json_name] = int(player[player_wins_last_10_json_name])
+            player[player_losses_last_10_json_name] = int(player[player_losses_last_10_json_name])
+            player[player_win_ratio_last_10_json_name] = float(player[player_win_ratio_last_10_json_name])
+            player[player_win_streak_json_name] = int(player[player_win_streak_json_name])
+            player[player_top_score_json_name] = int(player[player_top_score_json_name])
+            player[player_average_score_json_name] = float(player[player_average_score_json_name])
+            player[player_average_score_last_10_json_name] = float(player[player_average_score_last_10_json_name])
+            player[player_std_score_json_name] = float(player[player_std_score_json_name])
+            player[player_std_score_last_10_json_name] = float(player[player_std_score_last_10_json_name])
+            player[player_events_played_json_name] = int(player[player_events_played_json_name])
+            player[player_penalties_json_name] = int(player[player_penalties_json_name])
+            player[player_ranking_json_name] = int(player[player_ranking_json_name])      
             
             try:
                 if isinstance(player['update_date'], str):
@@ -518,7 +497,7 @@ class Leaderboard(object):
         how_long_ago = datetime.now() - last_updated
         days = how_long_ago.days
         seconds = int(how_long_ago.total_seconds())
-        hours = seconds//3600
+        hours = (seconds//3600)%24
         minutes = (seconds//60)%60
         stuffs = []
         if days != 0:
