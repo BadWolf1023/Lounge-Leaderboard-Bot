@@ -256,7 +256,7 @@ def isint(value:str):
     try:
         int(value)
         return True
-    except ValueError:
+    except:
         return False
 
 def print_key_data_error(key, player_data):
