@@ -95,6 +95,14 @@ player_last_event_date_json_name = "last_event_date"
 player_url_json_name = "url"
 player_emblem_url_json_name = "current_emblem"
 
+SHOULD_BE_IN_PLAYER_JSON = [player_id_json_name, player_name_json_name, player_country_json_name, player_base_mmr_json_name, player_base_lr_json_name, player_strikes_json_name,
+                            player_current_mmr_json_name, player_current_lr_json_name, player_peak_mmr_json_name, player_peak_lr_json_name, player_lowest_mmr_json_name, player_lowest_lr_json_name,
+                            player_wins_json_name, player_losses_json_name, player_most_mmr_gained_json_name, player_most_lr_gained_json_name, player_most_mmr_lost_json_name, player_most_lr_lost_json_name,
+                            player_win_percentage_json_name, player_net_mmr_last_10_json_name, player_net_lr_last_10_json_name, player_wins_last_10_json_name, player_losses_last_10_json_name,
+                            player_win_ratio_last_10_json_name, player_win_streak_json_name, player_top_score_json_name, player_average_score_json_name, player_average_score_last_10_json_name,
+                            player_std_score_json_name, player_std_score_last_10_json_name, player_events_played_json_name, player_penalties_json_name, player_ranking_json_name,
+                            player_last_event_date_json_name, player_url_json_name, player_emblem_url_json_name]
+
 
 leaderboard_terms = {"leader", "leaderboard", "ldr", "board"}
 leaderboard_type_terms = {'rt', 'ct'}
@@ -251,6 +259,9 @@ def isint(value:str):
     except ValueError:
         return False
 
+def print_key_data_error(key, player_data):
+    print('key:', key, 'value:', player_data[key], "type:", type(player_data[key]))
+    
 def detailed_players_is_corrupt(json_data, caller_checks_null=True):
     if json_data is None or not isinstance(json_data, dict):
         return True
@@ -269,48 +280,121 @@ def detailed_players_is_corrupt(json_data, caller_checks_null=True):
                 print("no player name")
                 continue
         
-
-        if player_id_json_name in player and isint(player[player_id_json_name])\
-        and player_name_json_name in player and isinstance(player[player_name_json_name], str) \
-        and player_country_json_name in player and isinstance(player[player_country_json_name], str)\
-        and player_base_mmr_json_name in player and isint(player[player_base_mmr_json_name])\
-        and player_base_lr_json_name in player and isint(player[player_base_lr_json_name])\
-        and player_strikes_json_name in player and isint(player[player_strikes_json_name])\
-        and player_current_mmr_json_name in player and isint(player[player_current_mmr_json_name])\
-        and player_current_lr_json_name in player and isint(player[player_current_lr_json_name])\
-        and player_peak_mmr_json_name in player and isint(player[player_peak_mmr_json_name])\
-        and player_peak_lr_json_name in player and isint(player[player_peak_lr_json_name])\
-        and player_lowest_mmr_json_name in player and isint(player[player_lowest_mmr_json_name])\
-        and player_lowest_lr_json_name in player and isint(player[player_lowest_lr_json_name])\
-        and player_wins_json_name in player and isint(player[player_wins_json_name])\
-        and player_losses_json_name in player and isint(player[player_losses_json_name])\
-        and player_most_mmr_gained_json_name in player and isint(player[player_most_mmr_gained_json_name])\
-        and player_most_lr_gained_json_name in player and isint(player[player_most_lr_gained_json_name])\
-        and player_most_mmr_lost_json_name in player and isint(player[player_most_mmr_lost_json_name])\
-        and player_most_lr_lost_json_name in player and isint(player[player_most_lr_lost_json_name])\
-        and player_win_percentage_json_name in player and isfloat(player[player_win_percentage_json_name]) \
-        and player_net_mmr_last_10_json_name in player and isint(player[player_net_mmr_last_10_json_name])\
-        and player_net_lr_last_10_json_name in player and isint(player[player_net_lr_last_10_json_name])\
-        and player_wins_last_10_json_name in player and isint(player[player_wins_last_10_json_name])\
-        and player_losses_last_10_json_name in player and isint(player[player_losses_last_10_json_name])\
-        and player_win_ratio_last_10_json_name in player and isfloat(player[player_win_ratio_last_10_json_name])\
-        and player_win_streak_json_name in player and isint(player[player_win_streak_json_name])\
-        and player_top_score_json_name in player and isint(player[player_top_score_json_name])\
-        and player_average_score_json_name in player and isfloat(player[player_average_score_json_name])\
-        and player_average_score_last_10_json_name in player and isfloat(player[player_average_score_last_10_json_name])\
-        and player_std_score_json_name in player and isfloat(player[player_std_score_json_name])\
-        and player_std_score_last_10_json_name in player and isfloat(player[player_std_score_last_10_json_name])\
-        and player_events_played_json_name in player and isint(player[player_events_played_json_name]) \
-        and player_penalties_json_name in player and isint(player[player_penalties_json_name]) \
-        and player_ranking_json_name in player and (isint(player[player_ranking_json_name]) or player[player_ranking_json_name] == "Unranked") \
-        and player_last_event_date_json_name in player and isinstance(player[player_last_event_date_json_name], str) \
-        and player_url_json_name in player and isinstance(player[player_url_json_name], str)\
-        and player_emblem_url_json_name in player and isinstance(player[player_emblem_url_json_name], str):
+        for key in SHOULD_BE_IN_PLAYER_JSON:
+            if key not in player:
+                print(f'The key "{key}" is not in this json: {player}')
+                return True
+            
+        if not isint(player[player_id_json_name]):
+            print_key_data_error(player_id_json_name, player)
+            return True
+        if not isinstance(player[player_name_json_name], str):
+            print_key_data_error(player_name_json_name, player)
+            return True
+        if not isinstance(player[player_country_json_name], str):
+            print_key_data_error(player_country_json_name, player)
+            return True
+        if not isint(player[player_base_mmr_json_name]):
+            print_key_data_error(player_base_mmr_json_name, player)
+            return True
+        if not isint(player[player_base_lr_json_name]):
+            print_key_data_error(player_base_lr_json_name, player)
+            return True
+        if not isint(player[player_strikes_json_name]):
+            print_key_data_error(player_strikes_json_name, player)
+            return True
+        if not isint(player[player_current_mmr_json_name]):
+            print_key_data_error(player_current_mmr_json_name, player)
+            return True
+        if not isint(player[player_current_lr_json_name]):
+            print_key_data_error(player_current_lr_json_name, player)
+            return True
+        if not isint(player[player_peak_mmr_json_name]):
+            print_key_data_error(player_peak_mmr_json_name, player)
+            return True
+        if not isint(player[player_peak_lr_json_name]):
+            print_key_data_error(player_peak_lr_json_name, player)
+            return True
+        if not isint(player[player_lowest_mmr_json_name]):
+            print_key_data_error(player_lowest_mmr_json_name, player)
+            return True
+        if not isint(player[player_lowest_lr_json_name]):
+            print_key_data_error(player_lowest_lr_json_name, player)
+            return True
+        if not isint(player[player_wins_json_name]):
+            print_key_data_error(player_wins_json_name, player)
+            return True
+        if not isint(player[player_losses_json_name]):
+            print_key_data_error(player_losses_json_name, player)
+            return True
+        if not isint(player[player_most_mmr_gained_json_name]):
+            print_key_data_error(player_most_mmr_gained_json_name, player)
+            return True
+        if not isint(player[player_most_lr_gained_json_name]):
+            print_key_data_error(player_most_lr_gained_json_name, player)
+            return True
+        if not isint(player[player_most_mmr_lost_json_name]):
+            print_key_data_error(player_most_mmr_lost_json_name, player)
+            return True
+        if not isint(player[player_most_lr_lost_json_name]):
+            print_key_data_error(player_most_lr_lost_json_name, player)
+            return True
+        if not isfloat(player[player_win_percentage_json_name]):
+            print_key_data_error(player_win_percentage_json_name, player)
+            return True
+        if not isint(player[player_net_mmr_last_10_json_name]):
+            print_key_data_error(player_net_mmr_last_10_json_name, player)
+            return True
+        if not isint(player[player_net_lr_last_10_json_name]):
+            print_key_data_error(player_net_lr_last_10_json_name, player)
+            return True
+        if not isint(player[player_wins_last_10_json_name]):
+            print_key_data_error(player_wins_last_10_json_name, player)
+            return True
+        if not isint(player[player_losses_last_10_json_name]):
+            print_key_data_error(player_losses_last_10_json_name, player)
+            return True
+        if not isfloat(player[player_win_ratio_last_10_json_name]):
+            print_key_data_error(player_win_ratio_last_10_json_name, player)
+            return True
+        if not isint(player[player_win_streak_json_name]):
+            print_key_data_error(player_win_streak_json_name, player)
+            return True
+        if not isint(player[player_top_score_json_name]):
+            print_key_data_error(player_top_score_json_name, player)
+            return True
+        if not isfloat(player[player_average_score_json_name]):
+            print_key_data_error(player_average_score_json_name, player)
+            return True
+        if not isfloat(player[player_average_score_last_10_json_name]):
+            print_key_data_error(player_average_score_last_10_json_name, player)
+            return True
+        if not isfloat(player[player_std_score_json_name]):
+            print_key_data_error(player_std_score_json_name, player)
+            return True
+        if not isfloat(player[player_std_score_last_10_json_name]):
+            print_key_data_error(player_std_score_last_10_json_name, player)
+            return True
+        if not isint(player[player_events_played_json_name]):
+            print_key_data_error(player_events_played_json_name, player)
+            return True
+        if not isint(player[player_penalties_json_name]):
+            print_key_data_error(player_penalties_json_name, player)
+            return True
+        if not isint(player[player_ranking_json_name]) and player[player_ranking_json_name] != "Unranked":
+            print_key_data_error(player_ranking_json_name, player)
+            return True
+        if not isinstance(player[player_last_event_date_json_name], str):
+            print_key_data_error(player_last_event_date_json_name, player)
+            return True
+        if not isinstance(player[player_url_json_name], str):
+            print_key_data_error(player_url_json_name, player)
+            return True
+        if not isinstance(player[player_emblem_url_json_name], str):
+            print_key_data_error(player_emblem_url_json_name, player)
+            return True
             continue
 
-        for key in player:
-            print('key:', key, 'value:', player[key], "type:", type(player[key]))
-        return True
     return False
 
 
