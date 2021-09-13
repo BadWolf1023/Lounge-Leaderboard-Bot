@@ -310,7 +310,8 @@ FLAG_CODES_REVERSE_MAPPING = {"USA":'us',
                            "BRA":'br',
                            "GBR":'gb',
                            "ESP":'es',
-                           "SPA":'es'}
+                           "SPA":'es',
+                           "UK":'gb'}
 FLAG_CODES_REVERSE_MAPPING.update({v:k for k,v in FLAG_CODES.items()}) #Full country name maps to its 2 digit code
 FLAG_CODES_REVERSE_MAPPING.update({k:k for k in FLAG_CODES}) #Add all 2 digit codes to map to themselves. Now we can let the user look up
 ALL_COUNTRIES_STRING = "\n".join(FLAG_CODES_REVERSE_MAPPING)
