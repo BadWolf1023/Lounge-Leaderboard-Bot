@@ -94,6 +94,7 @@ player_ranking_json_name = "ranking"
 player_last_event_date_json_name = "last_event_date"
 player_url_json_name = "url"
 player_emblem_url_json_name = "current_emblem"
+discord_id_json_name = "discord_user_id"
 
 SHOULD_BE_IN_PLAYER_JSON = [player_id_json_name, player_name_json_name, player_country_json_name, player_base_mmr_json_name, player_base_lr_json_name, player_strikes_json_name,
                             player_current_mmr_json_name, player_current_lr_json_name, player_peak_mmr_json_name, player_peak_lr_json_name, player_lowest_mmr_json_name, player_lowest_lr_json_name,
@@ -101,7 +102,7 @@ SHOULD_BE_IN_PLAYER_JSON = [player_id_json_name, player_name_json_name, player_c
                             player_win_percentage_json_name, player_net_mmr_last_10_json_name, player_net_lr_last_10_json_name, player_wins_last_10_json_name, player_losses_last_10_json_name,
                             player_win_ratio_last_10_json_name, player_win_streak_json_name, player_top_score_json_name, player_average_score_json_name, player_average_score_last_10_json_name,
                             player_std_score_json_name, player_std_score_last_10_json_name, player_events_played_json_name, player_penalties_json_name, player_ranking_json_name,
-                            player_last_event_date_json_name, player_url_json_name, player_emblem_url_json_name]
+                            player_last_event_date_json_name, player_url_json_name, player_emblem_url_json_name, discord_id_json_name]
 
 
 leaderboard_terms = {"leader", "leaderboard", "ldr", "board"}
@@ -143,6 +144,8 @@ stat_terms = {'avg10':(player_average_score_last_10_json_name, "Current Average 
 lr_leaderboard_terms = {}
 for country_code, country_name in Shared.FLAG_CODES.items():
     lr_leaderboard_terms[country_code] = (player_current_lr_json_name, f"{country_name} Leaderboard", False, True, 5)
+    
+player_country_mapping = {}
     
 mult_100_fields = {player_win_percentage_json_name}
 
@@ -208,7 +211,14 @@ def pickle_stats():
             p.dump(stats_count, pickle_out)
         except:
             print("Could not dump stats_counter. Current dict:", stats_count)         
-    
+
+def pickle_player_countries():
+    with open(Shared.player_country_file, "wb") as pickle_out:
+        try:
+            p.dump(player_country_mapping, pickle_out)
+        except:
+            print("Could not dump player country mapping. Current dict:", player_country_mapping) 
+                    
     
 def pickle_player_data():
     if lounge_player_data_rt != None and len(lounge_player_data_rt) > 0:
@@ -254,6 +264,17 @@ def load_player_pickle_data():
         else:
             print("cts.pkl doesn't exist, so no cached data loaded in")
 
+def load_player_country_mapping():
+    global player_country_mapping
+    if os.path.exists(Shared.player_country_file):
+        with open(Shared.player_country_file, "rb") as pickle_in:
+            try:
+                player_country_mapping.update(p.load(pickle_in))
+            except:
+                print("Could not read player country mapping in.")
+                player_country_mapping.clear()
+    else:
+        print(f"{Shared.player_country_file} doesn't exist, so no player country mapping loaded in")
 
 def isfloat(value:str):
     try:
@@ -472,7 +493,8 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
             player[player_std_score_last_10_json_name] = float(player[player_std_score_last_10_json_name])
             player[player_events_played_json_name] = int(player[player_events_played_json_name])
             player[player_penalties_json_name] = int(player[player_penalties_json_name])
-            #player[player_ranking_json_name] = int(player[player_ranking_json_name])      
+            #player[player_ranking_json_name] = int(player[player_ranking_json_name])
+                  
             
             try:
                 if isinstance(player[player_last_event_date_json_name], str):
@@ -483,6 +505,14 @@ async def pull_API_data(new_full_data_dict, is_rt=True):
                 print(player[player_last_event_date_json_name])
                 player[player_last_event_date_json_name] = datetime.min
             new_full_data_dict[player[player_id_json_name]] = player
+            if player[player_country_json_name] in Shared.FLAG_CODES and player[player_country_json_name] not in Shared.IGNORED_REGIONS:
+                player_country_mapping[player[player_id_json_name]] = (player[player_country_json_name], player[player_name_json_name], player[discord_id_json_name])
+            
+            if player[player_id_json_name] in player_country_mapping:
+                player_country, _, _ = player_country_mapping[player[player_id_json_name]]
+                player[player_country_json_name] = player_country
+                player_country_mapping[player[player_id_json_name]] = (player_country, player[player_name_json_name], player[discord_id_json_name]) #update their name and discord id
+                
             
                 
     return success

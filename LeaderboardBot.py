@@ -92,6 +92,7 @@ async def removeInactiveInstances():
 async def backup():
     Shared.backup_files(Shared.backup_file_list)
     Leaderboard.pickle_stats()
+    Leaderboard.pickle_player_countries()
     Shared.pickle_blacklisted_users()
 
 def private_data_init():
@@ -110,6 +111,7 @@ async def on_ready():
     global finished_on_ready
     if not finished_on_ready:
         Leaderboard.load_player_pickle_data()
+        Leaderboard.load_player_country_mapping()
         Leaderboard.load_stats_in()
         Shared.load_blacklisted_users()
         #Leaderboard.dump_data_to_csv() #Uncomment to dump the pulled data to a csv
@@ -128,6 +130,7 @@ async def on_ready():
 def on_exit():
     Shared.backup_files()
     Leaderboard.pickle_stats()
+    Leaderboard.pickle_player_countries()
     Shared.pickle_blacklisted_users()
     
     print("Exiting...")

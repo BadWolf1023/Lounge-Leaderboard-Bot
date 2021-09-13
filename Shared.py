@@ -9,7 +9,8 @@ from pathlib import Path
 counter_file = "stats_counter.pkl"
 total_stats_file = "total_stats.pkl"
 blacklisted_users_file = "blacklisted_users.pkl"
-backup_file_list = [counter_file, total_stats_file, 'rts.pkl', 'cts.pkl']
+player_country_file = "player_country_mapping.pkl"
+backup_file_list = [counter_file, total_stats_file, 'rts.pkl', 'cts.pkl', player_country_file]
 backup_folder = "backups/"
 import shutil
 from datetime import datetime
