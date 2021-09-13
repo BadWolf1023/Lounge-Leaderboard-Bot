@@ -867,7 +867,7 @@ class Leaderboard(object):
                                 should_send_error_message = True
                             
                             if should_send_error_message:
-                                Shared.send_missing_permissions(message.channel)
+                                await Shared.send_missing_permissions(message.channel)
                                 sent_missing_perms_message = True
                                 
                         try:
