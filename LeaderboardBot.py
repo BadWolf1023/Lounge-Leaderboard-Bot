@@ -14,7 +14,7 @@ import signal
 import Leaderboard
 from collections import defaultdict
 
-testing_server = False
+testing_server = True
 bot_key = None
 testing_bot_key = None
 

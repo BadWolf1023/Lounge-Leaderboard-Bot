@@ -339,6 +339,9 @@ FLAG_CODES = {
     "zw": "Zimbabwe"
 }
 
+FLAG_CODES_REVERSE_MAPPING = {v:k for k, v in FLAG_CODES.items()}
+IGNORED_REGIONS = {"un", "No Country", "Unknown"}
+
 def get_country_name(country_code):
     if country_code.lower().strip() in FLAG_CODES:
         return FLAG_CODES[country_code.lower().strip()]

@@ -738,7 +738,8 @@ class Leaderboard(object):
             for player in player_data.values():
                 country_counter[player[field_name]] += 1
             for country, players_in_country in country_counter.items():
-                to_sort.append({field_name:(players_in_country, country)})
+                if country not in Shared.IGNORED_REGIONS:
+                    to_sort.append({field_name:(players_in_country, country)})
         
         to_sort.sort(key=lambda p:p[field_name], reverse=should_reverse)
         results = to_sort[:x_number]
