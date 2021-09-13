@@ -32,7 +32,7 @@ currently_pulling = True
 interval_time = 1 #wait this many seconds between each ping to mkboards.com
 extra_wait_time = 20
 chunk_size = 25
-time_between_pulls = timedelta(hours=4)
+
 rt_last_updated = None
 ct_last_updated = None
 rt_progress = 0.0
@@ -139,6 +139,11 @@ stat_terms = {'avg10':(player_average_score_last_10_json_name, "Current Average 
               'events':(player_events_played_json_name, "Events Played", False, True, -1),
               'country':(player_country_json_name, "Players in Country", False, True, -1),
               }
+
+lr_leaderboard_terms = {}
+for country_code, country_name in Shared.FLAG_CODES.items():
+    lr_leaderboard_terms[country_code] = (player_current_lr_json_name, f"{country_name} Leaderboard", False, True, 5)
+    
 mult_100_fields = {player_win_percentage_json_name}
 
 
@@ -151,7 +156,7 @@ total_stats = None
 def load_stats_in():
     global stats_count
     global total_stats
-    if stats_count == None:
+    if stats_count is None:
         if os.path.exists(Shared.counter_file):
             with open(Shared.counter_file, "rb") as pickle_in:
                 try:
@@ -163,7 +168,7 @@ def load_stats_in():
             print("No stats count pkl found. Using default.")
             stats_count = [0,0]
     
-    if total_stats == None:
+    if total_stats is None:
         if os.path.exists(Shared.total_stats_file):
             with open(Shared.total_stats_file, "rb") as pickle_in:
                 try:
@@ -182,10 +187,15 @@ def load_stats_in():
                 total_stats[type_key] = {}
                 for key in stat_terms:
                     total_stats[type_key][key] = 0
-        for type_key in leaderboard_type_terms:
-            for key in stat_terms:
+        
+        for type_key in leaderboard_type_terms: #rt and ct
+            for key in stat_terms: #Set commands to 0 for everything in normal leaderboard commands
                 if key not in total_stats[type_key]:
                     total_stats[type_key][key] = 0
+            for key in lr_leaderboard_terms: #Set commands to 0 for everything in country leaderboard commands
+                if key not in total_stats[type_key]:
+                    total_stats[type_key][key] = 0
+        
    
 def pickle_stats():
     with open(Shared.total_stats_file, "wb") as pickle_out:
@@ -685,7 +695,7 @@ class Leaderboard(object):
 
     """#TODO: Add reaction text"""
     def get_extra_text(self, is_rt=True, is_dm=False):
-        total_message = "- Data updates every " + str(int(time_between_pulls.total_seconds())//3600) + " hours"
+        total_message = f"- Data updates every {Shared.hours_between_pulls} hours"
         cooldown_message = ""
         if not is_dm:
             cooldown_message = '\n- You can do !leaderboard again in ' + str(int(LEADERBOARD_WAIT_TIME.total_seconds())) + " seconds"
@@ -705,7 +715,7 @@ class Leaderboard(object):
         total_message += cooldown_message
         return total_message
     
-    def __get_results(self, command_name, field_name, date_filter, should_reverse, minimum_events_needed, x_number, is_rt=True, is_country_count=False):
+    def __get_results(self, command_name, field_name, date_filter, should_reverse, minimum_events_needed, x_number, is_rt=True, is_country_count=False, is_country_leaderboard_command=False):
         if is_rt not in global_cached:
             global_cached[is_rt] = {}
             
@@ -714,7 +724,14 @@ class Leaderboard(object):
         
         to_sort = []
         player_data = lounge_player_data_rt if is_rt else lounge_player_data_ct
-        if not is_country_count:
+        if is_country_count: #requsting player count for all countries
+            country_counter = defaultdict(int)
+            for player in player_data.values():
+                country_counter[player[field_name]] += 1
+            for country, players_in_country in country_counter.items():
+                if country not in Shared.IGNORED_REGIONS:
+                    to_sort.append({field_name:(players_in_country, country)})
+        else: #normal leaderboard command or country leaderboard command
             if date_filter:
                 date_cutoff = datetime.now() - date_filter_time
                 for player in player_data.values():
@@ -732,14 +749,11 @@ class Leaderboard(object):
                         continue
                     if field_name == player_win_streak_json_name and (player[player_wins_last_10_json_name]+1) < player[player_win_streak_json_name] and player[player_wins_last_10_json_name] < 10:
                         continue
+                    if is_country_leaderboard_command: #if it's a country LR leaderboard command...
+                        if command_name != player[player_country_json_name]: #if the given country doesn't match a player's country...
+                            continue #skip!
                     to_sort.append(player)
-        else:
-            country_counter = defaultdict(int)
-            for player in player_data.values():
-                country_counter[player[field_name]] += 1
-            for country, players_in_country in country_counter.items():
-                if country not in Shared.IGNORED_REGIONS:
-                    to_sort.append({field_name:(players_in_country, country)})
+                    
         
         to_sort.sort(key=lambda p:p[field_name], reverse=should_reverse)
         results = to_sort[:x_number]
@@ -750,7 +764,15 @@ class Leaderboard(object):
 
     async def send_leaderboard_message(self, client, message:discord.Message, prefix=Shared.prefix):
         self.last_used = datetime.now()
-        command_end = Shared.strip_prefix_and_command(message.content, leaderboard_terms, prefix).strip().split()        
+        command_end = Shared.strip_prefix_and_command(message.content, leaderboard_terms, prefix).strip().split()
+        is_country_leaderboard_command = False
+        if len(command_end) > 1:
+            command_end[1] = ' '.join(command_end[1:]).lower()
+            command_end = command_end[:2]
+            if command_end[1] in Shared.FLAG_CODES_REVERSE_MAPPING:
+                command_end[1] = Shared.FLAG_CODES_REVERSE_MAPPING[command_end[1]]
+                is_country_leaderboard_command = True
+        #print(command_end)
         cooldown_message = ""
         global stats_count
         if message.guild == None:
@@ -760,15 +782,19 @@ class Leaderboard(object):
             stats_count[1] += 1
             cooldown_message = '\n\n`You can do !leaderboard again in ' + str(int(LEADERBOARD_WAIT_TIME.total_seconds())) + " seconds`"
             self.last_leaderboard_sent = datetime.now()
+        
+        country_leaderboard_message = f"\n\nTo view the LR leaderboard for a specific country: `!leaderboard <rt/ct> <country>`\nA list of valid countries can be found here: <{Shared.VALID_COUNTRY_OPTIONS_LINK}>"
+        failed_message = "I don't understand your command. Here's how to use this command: `!leaderboard <rt/ct> <stat>`\n**<stat>** can be any of the following: *" + "* | *".join(stat_terms) + "*" + country_leaderboard_message + cooldown_message
+        
         if len(command_end) != 2:
-            await Shared.safe_send(message.channel, "Here's how to use this command: *!leaderboard  <rt/ct>  <stat>*\n**stat** can be any of the following: *" + ",  ".join(stat_terms) + "*" + cooldown_message)
+            await Shared.safe_send(message.channel, failed_message)
         
         else:
             if command_end[0].lower() not in leaderboard_type_terms:
                 await Shared.safe_send(message.channel, "Specify a leaderboard type: rt or ct" + cooldown_message)
             else:
-                if command_end[1].lower() not in stat_terms:
-                    await Shared.safe_send(message.channel, "Your **stat** was not valid. Here's how to use this command:\n*!leaderboard  <rt/ct>  <stat>*\n**stat** can be any of the following: *" + ",  ".join(stat_terms) + "*" + cooldown_message)
+                if command_end[1].lower() not in stat_terms and command_end[1].lower() not in lr_leaderboard_terms:
+                    await Shared.safe_send(message.channel, failed_message)
                 else:
                     is_rt = command_end[0].lower() == 'rt'
                     total_stats[command_end[0].lower()][command_end[1].lower()] += 1
@@ -784,9 +810,9 @@ class Leaderboard(object):
                     #The bot has fully booted up
                     if not still_booting:
                         #=========== Zero in here ============
-                        field_name, embed_name, date_filter, should_reverse, minimum_events_needed = stat_terms[command_end[1].lower()]
+                        field_name, embed_name, date_filter, should_reverse, minimum_events_needed = lr_leaderboard_terms[command_end[1].lower()] if is_country_leaderboard_command else stat_terms[command_end[1].lower()]
                         is_country_count = field_name == player_country_json_name
-                        results = self.__get_results(command_end[1].lower(), field_name, date_filter, should_reverse, minimum_events_needed, TOP_N_RESULTS, is_rt, is_country_count)
+                        results = self.__get_results(command_end[1].lower(), field_name, date_filter, should_reverse, minimum_events_needed, TOP_N_RESULTS, is_rt, is_country_count, is_country_leaderboard_command)
                         
                         is_dm = message.guild == None
                         page_num = 1
@@ -896,26 +922,30 @@ class Leaderboard(object):
         
         total_str = "**Most used leaderboard commands (RT):**\n"
         for field_name, amount in rt_top[:top_x]:
+            if field_name in Shared.FLAG_CODES:
+                field_name = Shared.FLAG_CODES[field_name]
             total_str += "- " + field_name + ": " + str(amount) + " commands\n"
             
         total_str += "\n**Most used leaderboard commands (CT):**\n"
         for field_name, amount in ct_top[:top_x]:
+            if field_name in Shared.FLAG_CODES:
+                field_name = Shared.FLAG_CODES[field_name]
             total_str += "- " + field_name + ": " + str(amount) + " commands\n"
         return total_str
     
     async def send_stats(self, message, top_x=5):
-        if message.guild == None:
+        if message.guild is None:
             self.last_stats_sent = None
         else:
             self.last_stats_sent = datetime.now()
             
         part1_str = "Could not find leaderboard command count."
-        if stats_count != None:
+        if stats_count is not None:
             part1_str = "**Leaderboard commands processed:** "
             part1_str += str(stats_count[0]) + " in DMs | " + str(stats_count[1]) + " in servers"
             
         part2_str = "Could not get top " + str(top_x) + " stats."
-        if total_stats != None and len(total_stats['rt']) >= top_x and len(total_stats['ct']) >= top_x:
+        if total_stats is not None and len(total_stats['rt']) >= top_x and len(total_stats['ct']) >= top_x:
             part2_str = self.get_top_x_stats_str(top_x)
             
             

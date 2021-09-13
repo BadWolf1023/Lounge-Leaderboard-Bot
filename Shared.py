@@ -29,6 +29,7 @@ WARN_THRESHOLD = 10
 AUTO_BAN_THRESHOLD = 15
 CAN_BLACKLIST_IDS = [706120725882470460]
 MKW_LOUNGE_SERVER_ID = 387347467332485122
+hours_between_pulls = 3
 
 VALID_COUNTRY_OPTIONS_LINK = "https://pastebin.pl/view/127942ef"
 
@@ -313,9 +314,9 @@ FLAG_CODES_REVERSE_MAPPING.update({v:k for k,v in FLAG_CODES.items()}) #Full cou
 FLAG_CODES_REVERSE_MAPPING.update({k:k for k in FLAG_CODES}) #Add all 2 digit codes to map to themselves. Now we can let the user look up
 ALL_COUNTRIES_STRING = "\n".join(FLAG_CODES_REVERSE_MAPPING)
 assert set(FLAG_CODES_REVERSE_MAPPING.values()).issubset(set(FLAG_CODES.keys()))
-print(ALL_COUNTRIES_STRING)
+#print(ALL_COUNTRIES_STRING)
 IGNORED_REGIONS = {"un", "No Country"}
-FLAG_CODES_REVERSE_MAPPING = {k.lower():v for k,v in FLAG_CODES.items()}
+FLAG_CODES_REVERSE_MAPPING = {k.lower():v for k,v in FLAG_CODES_REVERSE_MAPPING.items()}
 
 def get_country_name(country_code):
     if country_code.lower().strip() in FLAG_CODES:

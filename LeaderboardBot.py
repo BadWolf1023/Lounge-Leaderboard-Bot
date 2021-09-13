@@ -14,7 +14,7 @@ import signal
 import Leaderboard
 from collections import defaultdict
 
-testing_server = True
+testing_server = False
 bot_key = None
 testing_bot_key = None
 
@@ -52,7 +52,7 @@ async def on_message(message: discord.Message):
     await leaderboard_instance.process_leaderboard_command(client, message)
         
 
-@tasks.loop(hours=3)
+@tasks.loop(hours=Shared.hours_between_pulls)
 async def leaderboard_pull():
     await Leaderboard.pull_data()
     
