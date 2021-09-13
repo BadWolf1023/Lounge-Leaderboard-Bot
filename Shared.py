@@ -30,6 +30,8 @@ AUTO_BAN_THRESHOLD = 15
 CAN_BLACKLIST_IDS = [706120725882470460]
 MKW_LOUNGE_SERVER_ID = 387347467332485122
 
+VALID_COUNTRY_OPTIONS_LINK = "https://pastebin.pl/view/127942ef"
+
 FLAG_CODES = {
     "ad": "Andorra",
     "ae": "United Arab Emirates",
@@ -270,59 +272,9 @@ FLAG_CODES = {
     "um": "United States Minor Outlying Islands",
     "un": "No Country",
     "us": "United States",
-    "us-ak": "Alaska",
-    "us-al": "Alabama",
-    "us-ar": "Arkansas",
-    "us-az": "Arizona",
-    "us-ca": "California",
-    "us-co": "Colorado",
-    "us-ct": "Connecticut",
-    "us-de": "Delaware",
-    "us-fl": "Florida",
-    "us-ga": "Georgia",
-    "us-hi": "Hawaii",
-    "us-ia": "Iowa",
-    "us-id": "Idaho",
-    "us-il": "Illinois",
-    "us-in": "Indiana",
-    "us-ks": "Kansas",
-    "us-ky": "Kentucky",
-    "us-la": "Louisiana",
-    "us-ma": "Massachusetts",
-    "us-md": "Maryland",
-    "us-me": "Maine",
-    "us-mi": "Michigan",
-    "us-mn": "Minnesota",
-    "us-mo": "Missouri",
-    "us-ms": "Mississippi",
-    "us-mt": "Montana",
-    "us-nc": "North Carolina",
-    "us-nd": "North Dakota",
-    "us-ne": "Nebraska",
-    "us-nh": "New Hampshire",
-    "us-nj": "New Jersey",
-    "us-nm": "New Mexico",
-    "us-nv": "Nevada",
-    "us-ny": "New York",
-    "us-oh": "Ohio",
-    "us-ok": "Oklahoma",
-    "us-or": "Oregon",
-    "us-pa": "Pennsylvania",
-    "us-ri": "Rhode Island",
-    "us-sc": "South Carolina",
-    "us-sd": "South Dakota",
-    "us-tn": "Tennessee",
-    "us-tx": "Texas",
-    "us-ut": "Utah",
-    "us-va": "Virginia",
-    "us-vt": "Vermont",
-    "us-wa": "Washington",
-    "us-wi": "Wisconsin",
-    "us-wv": "West Virginia",
-    "us-wy": "Wyoming",
     "uy": "Uruguay",
     "uz": "Uzbekistan",
-    "va": "Vatican City (Holy See)",
+    "va": "Vatican City",
     "vc": "Saint Vincent and the Grenadines",
     "ve": "Venezuela",
     "vg": "British Virgin Islands",
@@ -339,8 +291,31 @@ FLAG_CODES = {
     "zw": "Zimbabwe"
 }
 
-FLAG_CODES_REVERSE_MAPPING = {v:k for k, v in FLAG_CODES.items()}
-IGNORED_REGIONS = {"un", "No Country", "Unknown"}
+FLAG_CODES_REVERSE_MAPPING = {"USA":'us',
+                           "AUS":'au',
+                           "JPN":'jp',
+                           "ITA":'it',
+                           "DEN":'dk',
+                           "IRE":'ie',
+                           "ENG":'gb',
+                           "NOR":'no',
+                           "CAN":'ca',
+                           "SCO":'gb',
+                           "GER":'de',
+                           "FRA":'fr',
+                           "GRE":'gr',
+                           "MEX":'mx',
+                           "BRA":'br',
+                           "GBR":'gb',
+                           "ESP":'es',
+                           "SPA":'es'}
+FLAG_CODES_REVERSE_MAPPING.update({v:k for k,v in FLAG_CODES.items()}) #Full country name maps to its 2 digit code
+FLAG_CODES_REVERSE_MAPPING.update({k:k for k in FLAG_CODES}) #Add all 2 digit codes to map to themselves. Now we can let the user look up
+ALL_COUNTRIES_STRING = "\n".join(FLAG_CODES_REVERSE_MAPPING)
+assert set(FLAG_CODES_REVERSE_MAPPING.values()).issubset(set(FLAG_CODES.keys()))
+print(ALL_COUNTRIES_STRING)
+IGNORED_REGIONS = {"un", "No Country"}
+FLAG_CODES_REVERSE_MAPPING = {k.lower():v for k,v in FLAG_CODES.items()}
 
 def get_country_name(country_code):
     if country_code.lower().strip() in FLAG_CODES:
