@@ -555,6 +555,8 @@ class Leaderboard(object):
         return Shared.is_in(message, inrole_terms, prefix)
     
     def is_inrole_command_allowed(self, message:discord.Message):
+        if message.id != Shared.MKW_LOUNGE_SERVER_ID:
+            return True
         valid_channels = {389521626645004302}
         valid_categories = {430167221600518174}
         return message.channel.id in valid_channels or message.channel.category_id in valid_categories
