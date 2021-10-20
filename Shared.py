@@ -17,6 +17,10 @@ from datetime import datetime
 import os
 import dill as p
 from collections import defaultdict
+import ssl
+import certifi
+
+sslcontext = ssl.create_default_context(cafile=certifi.where())
 
 prefix = "!"
 
@@ -32,7 +36,7 @@ CAN_BLACKLIST_IDS = [706120725882470460]
 MKW_LOUNGE_SERVER_ID = 387347467332485122
 hours_between_pulls = 3
 
-VALID_COUNTRY_OPTIONS_LINK = "https://pastebin.pl/view/127942ef"
+VALID_COUNTRY_OPTIONS_LINK = "https://pastebin.pl/view/fe1b6250"
 
 FLAG_CODES = {
     "ad": "Andorra",
@@ -170,7 +174,6 @@ FLAG_CODES = {
     "lc": "Saint Lucia",
     "li": "Liechtenstein",
     "lk": "Sri Lanka",
-    "lr": "Liberia",
     "ls": "Lesotho",
     "lt": "Lithuania",
     "lu": "Luxembourg",
@@ -448,10 +451,10 @@ async def safe_send(channel:discord.TextChannel, content=None, embed=None, delet
 async def fetch(url, headers=None):
     async with aiohttp.ClientSession() as session:
         if headers == None:
-            async with session.get(url) as response:
+            async with session.get(url, ssl=sslcontext) as response:
                 return await response.json()
         else:
-            async with session.get(url, headers=headers) as response:
+            async with session.get(url, headers=headers, ssl=sslcontext) as response:
                 return await response.json()
             
 #================= File stuff ============================
