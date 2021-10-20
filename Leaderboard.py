@@ -143,7 +143,7 @@ stat_terms = {'avg10':(player_average_score_last_10_json_name, "Current Average 
 
 lr_leaderboard_terms = {}
 for country_code, country_name in Shared.FLAG_CODES.items():
-    lr_leaderboard_terms[country_code] = (player_current_lr_json_name, f"{country_name} Leaderboard", False, True, 5)
+    lr_leaderboard_terms[country_code] = (player_current_lr_json_name, f"{country_name} Leaderboard", False, True, 1)
     
 player_country_mapping = {}
     
@@ -846,6 +846,7 @@ class Leaderboard(object):
                         
                         is_dm = message.guild == None
                         page_num = 1
+                        print(results)
                         first_page_embed = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm, is_country_count)             
                         embed_message = await Shared.safe_send(message.channel, embed=first_page_embed)
                         
@@ -911,6 +912,8 @@ class Leaderboard(object):
                                 pass
                             if message.guild != None and not sent_missing_perms_message:
                                 await Shared.send_missing_permissions(message.channel)
+                        except discord.errors.NotFound:
+                            pass
                             
                         
                         
@@ -924,7 +927,7 @@ class Leaderboard(object):
         
         to_display = results[(page_num-1)*10:(page_num*10)]
         
-        if len(to_display) > 1:
+        if len(to_display) >= 1:
             for rank, data in enumerate(to_display, start=((page_num-1)*10)+1):
                 player_name = data[player_name_json_name] if not is_country_count else Shared.get_country_name(data[field_name][1])
                 data_piece = data[field_name] if not is_country_count else data[field_name][0]
