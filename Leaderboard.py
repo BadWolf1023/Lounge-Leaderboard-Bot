@@ -846,8 +846,7 @@ class Leaderboard(object):
                         
                         is_dm = message.guild == None
                         page_num = 1
-                        print(results)
-                        first_page_embed = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm, is_country_count)             
+                        first_page_embed = self.get_embed_page(page_num, results, is_rt, embed_name, field_name, is_dm, is_country_count)
                         embed_message = await Shared.safe_send(message.channel, embed=first_page_embed)
                         
                         try:
