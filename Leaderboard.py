@@ -25,8 +25,8 @@ lounge_player_data_rt = None
 lounge_player_data_ct = None
 global_cached = {}
 
-rt_specific_url = "https://www.mkwlounge.gg/api/ladderplayer.php?ladder_id=1&all=1"
-ct_specific_url = "https://www.mkwlounge.gg/api/ladderplayer.php?ladder_id=2&all=1"
+rt_specific_url = "https://www.mkwlounge.gg/api/ladderplayer.php?ladder_type=rt&all=1"
+ct_specific_url = "https://www.mkwlounge.gg/api/ladderplayer.php?ladder_type=ct&all=1"
 
 currently_pulling = True
 interval_time = 1 #wait this many seconds between each ping to mkboards.com
