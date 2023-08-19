@@ -1,0 +1,2 @@
+Ignore this line - change this file name to private.txt
+Discord Bot Key goes on this line
