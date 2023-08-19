@@ -655,7 +655,7 @@ class Leaderboard(object):
     
     async def send_inrole_message(self, client, message:discord.Message, prefix=Shared.prefix):
         
-        # roles = await ctx.guild.fetch_roles().flatten()
+        roles = [role for role in await message.guild.fetch_roles()]
         roleName = " ".join(message.content.split()[1:])
         roles = message.guild.roles
         role = None
@@ -669,7 +669,7 @@ class Leaderboard(object):
         else:
             members = await message.guild.fetch_members(limit=None).flatten()
             
-            filtered_members = sorted(map(lambda member: f"{member.display_name} ({str(member)})", filter(lambda member: role in member.roles, members)), key=lambda s:s.upper())
+            filtered_members = sorted([f"{member.display_name} ({str(member.name)})" for member in filter(lambda member: role in member.roles, members)],key=lambda s: s.upper())
             current_page = 0
             max_page = ((len(filtered_members) - 1)//20)
             new_embed = discord.Embed(
